@@ -32,9 +32,9 @@ class Simulation(object):
         # Create N simultaneous Drones
         for d in range(0, num_swarm):
             self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
-            #using Old vehicle: steering behavior
+            #Instantiate drone 
             drone = Vehicle(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
-            
+        
             #using potential fields
             #drone = VehiclePF(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
 
@@ -66,14 +66,14 @@ class Simulation(object):
             # checks if drones colided with eachother
 
             ## collision avoindance is not implemented yet
-            _.collision_avoidance(self.swarm,index)
-            _.check_collision(self.swarm,list_obst,index) 
+            _.align_swarm(self.swarm,index)
+            _.collision_avoidance(self.swarm,list_obst,index) 
             _.update()
             _.draw(self.screenSimulation.screen) 
             # index to keep track of  drone in the list
             index += 1
             # writes drone id
-            img = self.screenSimulation.font20.render(f'Drone {index}', True, BLUE)
+            img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, BLUE)
             self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
             # writes drone current behavior
             #img = self.screenSimulation.font20.render(_.behavior.get_current_state(), True, BLUE)
