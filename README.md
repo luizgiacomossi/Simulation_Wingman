@@ -1,13 +1,14 @@
-# Busca com Swarm de drones
+# Loyal Wingman Simulation
 
-Este projeto é referente ao projeto final da disciplina de Simulação de drones SC-249/2021 do ITA - Instituto Tecnológico de Aeronáutica
+This project is an implementation of the loyal wingman concept
+Where there is a leading drone, controlled by the user, and loyal wingman drones protecting the leading drone from kamikaze attacks.
 
-Para execução do programa é necessário:
+For the execution of the script it is necessary:
 
 - PYTHON
-- VSCode ou algum outro editor de código
+- VSCode or any other code editor
 
-Dependencias: 
+Dependencies: 
 
 - PYGAME -> https://www.pygame.org/wiki/GettingStarted
 	- pip install pygame
@@ -15,15 +16,15 @@ Dependencias:
 	- pip install numpy
 
 
-Executar o arquivo: main.py
+Execute: main.py
 
-Descrição dos Arquivos
+Files Description:
  
-	Main.py 	 - arquivo principal
-	utils.py 	 - Funções uteis utilizadas
-	constants.py 	 - paramentros para a simulação
-	state_machine.py - Implementação da Maquina de estados e dos behaviors 
-	vehicle.py	 - Implementação da lógica do veiculo (drone) e seus movimentos básicos
-	obstacle.py  	 - Lógica da geraçao de obstaculos
+	Main.py 	 - Main file
+	utils.py 	 - useful functions
+	constants.py 	 - parameters used in the simulation
+	state_machine.py - state machine used to control behaviors
+	vehicle.py	 - MAV logic and basic behaviors
+	obstacle.py  	 - Used to generate obstacles in the scenario
 
-A pasta model contem sprites utilizadas para animação do drone
+The folder Model is for the sprites used in the animation
