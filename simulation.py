@@ -56,9 +56,19 @@ class Simulation(object):
     def append_uav(self, drone):
         self.swarm.append(drone)
 
-    def set_target(self, target):
+    def set_same_target_all(self, target):
         for _ in self.swarm:
             _.set_target(target)
+
+    def set_target(self, targets):
+        '''
+            Set position in formation for drones
+        '''
+        i = 0
+        #print(targets)
+        for _ in self.swarm:
+            _.set_target(targets[i])
+            i += 1
 
     def run_simulation(self, list_obst):
         index = 0 # index is used to track current drone in the simulation list

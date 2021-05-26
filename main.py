@@ -7,6 +7,9 @@ from obstacle import Obstacles
 from simulation import Simulation, ScreenSimulation
 from vehicle import LeadingDrone
 from state_machine import FiniteStateMachine, SeekState
+
+
+
 vec2 = pygame.math.Vector2
 ##=========================
 screenSimulation = ScreenSimulation()
@@ -52,12 +55,10 @@ while run:
                 # moves leading drone to point clicked
                 target_leading = vec2(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1])
                 leadingdrone.set_target(target_leading)
+                list_pos = leadingdrone.set_formation()
                 #set target for all loyal wingman
-                target = leadingdrone.get_position()
-                simulation.set_target(target) 
+                simulation.set_target(list_pos) 
                
- 
-
             # right button - New Drone
             if pygame.mouse.get_pressed()[2] == True:
                 simulation.add_new_uav()              
@@ -73,6 +74,11 @@ while run:
 
     # updates and draws all simulations  
     simulation.run_simulation(list_obst)
+
+    #set target for all loyal wingman
+    list_pos = leadingdrone.set_formation()
+    simulation.set_target(list_pos) 
+    #updates and draws leading drone
     leadingdrone.update()
     leadingdrone.draw(screenSimulation)
 

@@ -101,7 +101,7 @@ class Vehicle(object):
         # Draws current target being seeked 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
     
-    def arrive_new(self, target_leader):
+    def arrive_new_dynamic(self, target_leader):
         """
             Arrive using potential fields 
         """
@@ -843,7 +843,7 @@ class LeadingDrone(object):
         # Draws current target being seeked 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
     
-    def arrive(self, target):
+    def arrive_new(self, target):
         """
             Arrive using potential fields 
         """
@@ -861,7 +861,7 @@ class LeadingDrone(object):
         # Draws current target as a point 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
-    def arrive_old(self, target):
+    def arrive(self, target):
         """
             Arrive Steering Behavior
         """
@@ -890,8 +890,8 @@ class LeadingDrone(object):
         # apply force to the vehicle
         self.applyForce(steer)
         # Simulates Wind - random Noise
-        wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
-        self.applyForce(wind)
+        #wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
+        #self.applyForce(wind)
         # Draws current target as a point 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
@@ -1008,6 +1008,32 @@ class LeadingDrone(object):
                 if (d < RADIUS_OBSTACLES + SIZE_DRONE):
                     self.velocity *= -1
                 self.applyForce(-f_repulsion)
+
+    def set_formation(self, num_drones = NUM_DRONES, distance_leader = DISTANCE_LEADER):
+        '''
+            This method returns the positions for the loyal wingman surrounding the leading drone
+
+            input: number of drones in formation
+            return: list of positions
+        '''
+        step_angle = 2 * pi / num_drones 
+        pos = self.get_position()
+        print(f'position leader:{pos}')
+        ang = 0
+        list_positions = []
+        # calculates position of drone in formation
+        for _ in range(num_drones):
+            x = pos[0] + distance_leader*cos(ang)
+            y = pos[1] + distance_leader*sin(ang)
+            print(f'position wingman:{(x,y)}')
+            print(f'angulo: {ang*180/pi}')
+            ang += step_angle
+            
+            list_positions.append( vec2( x, y ) )
+
+        return list_positions
+
+
 
     # Deleting (Calling destructor)
     def __del__(self):

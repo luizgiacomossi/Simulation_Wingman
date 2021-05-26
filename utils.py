@@ -19,7 +19,6 @@ def bivariateFunction(alpha,beta,center,position):
         control variables: Alpha and Beta will control the stringthof the vectors in x and y directions
         return: point in the bivariate function
     '''
-    #k = 100000000 # parameter
     k = 10
     f = exp( -alpha*(position.x - center.x)/k**2 - beta*(position.y - center.y)/k**2 )
     #print(f)
@@ -150,7 +149,7 @@ class Aircraft(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self)
         self.sprites = []
 
-        for i in range(0,4):
+        for i in range(0,5):
             self.sprites.append(pg.image.load(f'models/Drone5/sprite_{i}.png'))
 
         self.atual = 0
