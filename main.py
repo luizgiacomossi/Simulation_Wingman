@@ -5,7 +5,7 @@ import copy
 from utils import FlowField
 from obstacle import Obstacles
 from simulation import Simulation, ScreenSimulation
-from vehicle import LeadingDrone
+from vehicle import LeadingDrone, LoyalWingman
 from state_machine import FiniteStateMachine, SeekState
 
 

@@ -1,6 +1,6 @@
 import pygame
 from constants import *
-from vehicle import Vehicle, VehiclePF
+from vehicle import Vehicle, VehiclePF, LoyalWingman
 from state_machine import FiniteStateMachine, SeekState, StayAtState, OvalState, Eight2State, ScanState
 
 vec2 = pygame.math.Vector2
@@ -16,6 +16,8 @@ class ScreenSimulation(object):
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode(self.size)
 
+class kamikaze_control():
+    pass
 
 class Simulation(object):
     
@@ -27,13 +29,14 @@ class Simulation(object):
         
         # Current simulations 
         self.swarm = []
+        self.kamikazes = []
 
     def create_swarm_uav(self, num_swarm):
         # Create N simultaneous Drones
         for d in range(0, num_swarm):
             self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
             #Instantiate drone 
-            drone = Vehicle(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
+            drone = LoyalWingman(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
         
             #using potential fields
             #drone = VehiclePF(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)

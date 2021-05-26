@@ -178,7 +178,7 @@ class Vehicle(object):
             posToPerimeter = centerToPerimeter + posToCenter 
             #pg.draw.line(window,(255,0,0),center,center+posToPerimeter,5 )
 
-            print(f'distancia até perimetro {posToPerimeter.length()}')
+            #print(f'distancia até perimetro {posToPerimeter.length()}')
 
             # new target is on the radius
                 # theta is the angle of the vector center to perimeter
@@ -563,7 +563,7 @@ class VehiclePF(object):
             posToPerimeter = centerToPerimeter + posToCenter 
             #pg.draw.line(window,(255,0,0),center,center+posToPerimeter,5 )
 
-            print(f'distancia até perimetro {posToPerimeter.length()}')
+            #print(f'distancia até perimetro {posToPerimeter.length()}')
 
             # new target is on the radius
                 # theta is the angle of the vector center to perimeter
@@ -702,7 +702,7 @@ class VehiclePF(object):
                 f = limit(f,self.max_force)
                 #self.velocity *= d/(AVOID_DISTANCE*factor_distance)
                 self.applyForce(f)
-                print(f'Alerta de colisão drone {index} com drone {aux}')
+                #print(f'Alerta de colisão drone {index} com drone {aux}')
                 break
             aux +=1
         # check obstacles 
@@ -812,15 +812,15 @@ class LeadingDrone(Vehicle):
         '''
         step_angle = 2 * pi / num_drones 
         pos = self.get_position()
-        print(f'position leader:{pos}')
+        #print(f'position leader:{pos}')
         ang = 0
         list_positions = []
         # calculates position of drone in formation
         for _ in range(num_drones):
             x = pos[0] + distance_leader*cos(ang)
             y = pos[1] + distance_leader*sin(ang)
-            print(f'position wingman:{(x,y)}')
-            print(f'angulo: {ang*180/pi}')
+            #print(f'position wingman:{(x,y)}')
+            #print(f'angulo: {ang*180/pi}')
             ang += step_angle
             
             list_positions.append( vec2( x, y ) )
@@ -830,6 +830,32 @@ class LeadingDrone(Vehicle):
     # Deleting (Calling destructor)
     def __del__(self):
         print('Drone Deleted')
+
+class LoyalWingman(Vehicle):
+    def __init__(self, x, y, behavior, window):
+        super().__init__(x, y, behavior, window)
+        self.error = vec2(0,0)
+    
+    def arrive(self, target):
+        """
+            Arrive using position controler P
+        """
+        # Calculates vector desired position
+        kp = 0.0024
+
+        self.desired = kp * (target - self.location) 
+
+        v_desired = self.desired / SAMPLE_TIME
+
+        a_desired = (v_desired - self.velocity) / SAMPLE_TIME
+        a_desired =  limit(a_desired, self.max_force)
+
+        self.applyForce(a_desired)
+        # Simulates Wind - random Noise
+        #wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
+        #self.applyForce(wind)
+        # Draws current target as a point 
+        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
 class Kamikaze(Vehicle):
     
