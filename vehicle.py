@@ -832,4 +832,6 @@ class LeadingDrone(Vehicle):
         print('Drone Deleted')
 
 class Kamikaze(Vehicle):
-    pass
+    
+    def set_random_target():
+        pass

@@ -60,7 +60,7 @@ class Simulation(object):
         for _ in self.swarm:
             _.set_target(target)
 
-    def set_target(self, targets):
+    def goto_formation(self, targets):
         '''
             Set position in formation for drones
         '''

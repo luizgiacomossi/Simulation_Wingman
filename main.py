@@ -57,7 +57,7 @@ while run:
                 leadingdrone.set_target(target_leading)
                 list_pos = leadingdrone.set_formation()
                 #set target for all loyal wingman
-                simulation.set_target(list_pos) 
+                simulation.goto_formation(list_pos) 
                
             # right button - New Drone
             if pygame.mouse.get_pressed()[2] == True:
@@ -77,7 +77,7 @@ while run:
 
     #set target for all loyal wingman
     list_pos = leadingdrone.set_formation()
-    simulation.set_target(list_pos) 
+    simulation.goto_formation(list_pos) 
     #updates and draws leading drone
     leadingdrone.update()
     leadingdrone.draw(screenSimulation)
