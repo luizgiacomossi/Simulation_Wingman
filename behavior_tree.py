@@ -315,3 +315,24 @@ class RotateNode(LeafNode):
         
         return ExecutionStatus(2) # Rotação em execucao 
 
+class KamikazeBehaviorTree(BehaviorTree):
+    """
+    Represents a behavior tree of a roomba cleaning robot.
+    """
+    def __init__(self):
+        super().__init__()
+        # Todo: construct the tree here
+        raiz = self.root = SelectorNode("root") # Raiz: Componente Selector
+
+        #Construção Sequence Esquerdo
+        sequenceLeft = SequenceNode("SequenceEsquerda") # Instancia Nó Sequence lado esquerdo
+        raiz.add_child(sequenceLeft) # add Nó a Raiz da arvore
+        sequenceLeft.add_child(MoveForwardNode())  # Adiciona Nó de Ação a componente SequenceEsquerdo: Move Forward
+        sequenceLeft.add_child(MoveInSpiralNode()) # Adiciona Nó de Ação a componente SequenceEsquerdo: Move In Spiral
+        
+        #Construção  Sequence Direito
+        sequenceRight = SequenceNode("SequenceDireita") # Instancia Nó Sequence lado Direito
+        raiz.add_child(sequenceRight) # add Nó a Raiz da arvore 
+        sequenceRight.add_child(GoBackNode()) # Adiciona Nó de Ação a componente SequenceDireito: Go Back
+        sequenceRight.add_child(RotateNode()) # Adiciona Nó de Ação a componente SequenceDireito: Rotate
+     

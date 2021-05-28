@@ -41,6 +41,7 @@ class Vehicle(object):
 
         # Variables related to State Machine
         self.behavior = behavior
+
         self.window = window # tela em que esta acontecendo a simulaçao
         self.theta = 0 # variavel para o eight somada no seek_around
         self.count = 0
@@ -352,11 +353,11 @@ class Vehicle(object):
                 break
             aux +=1
 
-        # --- Repulsion From Leading Drone 
+        # --- Repulsion From obstacles
         for p in pos_obstacles:
             d = (self.location - p).length()
-            factor_repulsion = 0.001
-            dist_avoid = DISTANCE_LEADER - SIZE_DRONE*2
+            factor_repulsion = 0.005
+            dist_avoid = RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE
             if ( d < dist_avoid ) :
                 f_repulsion = derivativeBivariate(factor_repulsion,factor_repulsion, p , self.location  )/SAMPLE_TIME
                 #print(f_repulsion)
@@ -365,7 +366,7 @@ class Vehicle(object):
                 # This condition checks if drone collided with wall
                 # if collided, this avoids that the drone goes over the obstacle
                 if (d < AVOID_DISTANCE):
-                    self.velocity = - self.velocity.normalize()*self.max_speed
+                    self.applyForce(- self.velocity.normalize()*self.max_speed) 
                     
                 self.applyForce(-f_repulsion)
 
@@ -838,17 +839,19 @@ class LoyalWingman(Vehicle):
     
     def arrive(self, target):
         """
-            Arrive using position controler P
+            Arrive using position controler PV
         """
         # Calculates vector desired position
-        kp = 0.0024
+        #kp = 0.0024
+        #kp = 50
+        #kv = 800
+        xi=0.9
+        wn=20/60
+        kv = 2*MASS*xi*wn
+        kp = MASS*wn**2
+        self.desired = kp * (target - self.location) - kv * self.velocity
 
-        self.desired = kp * (target - self.location) 
-
-        v_desired = self.desired / SAMPLE_TIME
-
-        a_desired = (v_desired - self.velocity) / SAMPLE_TIME
-        a_desired =  limit(a_desired, self.max_force)
+        a_desired =  limit(self.desired, self.max_force)
 
         self.applyForce(a_desired)
         # Simulates Wind - random Noise
@@ -857,7 +860,37 @@ class LoyalWingman(Vehicle):
         # Draws current target as a point 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
+    def collision_avoidance_leader(self, pos_leader):
+        """
+          avoid collision with leader drones
+        """
+        # check drones
+
+        # --- Repulsion From obstacles
+        for p in pos_leader:
+            d = (self.location - p).length()
+            factor_repulsion = 0.5
+            dist_avoid = AVOID_DISTANCE + SIZE_DRONE*2
+            if ( d < dist_avoid ) :
+                f_repulsion = derivativeBivariate(factor_repulsion,factor_repulsion, p , self.location  )/SAMPLE_TIME
+                #print(f_repulsion)
+                f_repulsion = limit(f_repulsion,self.max_force*1.8)
+             #----
+                # This condition checks if drone collided with wall
+                # if collided, this avoids that the drone goes over the obstacle
+                if (d < AVOID_DISTANCE):
+                    self.applyForce(- self.velocity.normalize()*self.max_speed) 
+                    
+                self.applyForce(-f_repulsion)
+
+
 class Kamikaze(Vehicle):
-    
-    def set_random_target():
-        pass
+    '''
+        The kamikaze drones are using behavior tree to operate
+    '''
+    def __init__(self, x, y, behavior, window):
+        super().__init__(x, y, behavior, window)
+
+        self.behavior = behavior
+
+

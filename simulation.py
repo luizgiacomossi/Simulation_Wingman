@@ -16,8 +16,11 @@ class ScreenSimulation(object):
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode(self.size)
 
-class kamikaze_control():
-    pass
+class kamikaze_control(object):
+    def __init__(self, num_kamikazes, screen):
+        # Creates a kamikaze
+        behavior = KamikazeBehaviorTree()
+        kamikaze = Kamikaze(SCREEN_WIDTH / 2.0,  SCREEN_HEIGHT / 2.0, behavior, screen)
 
 class Simulation(object):
     
@@ -73,7 +76,7 @@ class Simulation(object):
             _.set_target(targets[i])
             i += 1
 
-    def run_simulation(self, list_obst):
+    def run_simulation(self, pos_leader ,list_obst):
         index = 0 # index is used to track current drone in the simulation list
         for _ in self.swarm:
             # checks if drones colided with eachother
@@ -81,12 +84,13 @@ class Simulation(object):
             ## collision avoindance is not implemented yet
             _.align_swarm(self.swarm,index)
             _.collision_avoidance(self.swarm,list_obst,index) 
+            _.collision_avoidance_leader(pos_leader)
             _.update()
             _.draw(self.screenSimulation.screen) 
             # index to keep track of  drone in the list
             index += 1
             # writes drone id
-            img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, BLUE)
+            img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, LIGHT_BLUE)
             self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
             # writes drone current behavior
             #img = self.screenSimulation.font20.render(_.behavior.get_current_state(), True, BLUE)
