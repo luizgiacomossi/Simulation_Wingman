@@ -6,7 +6,7 @@ from utils import FlowField
 from obstacle import Obstacles
 from simulation import Simulation, ScreenSimulation
 from vehicle import LeadingDrone, LoyalWingman, Kamikaze
-from state_machine import FiniteStateMachine, SeekState
+from state_machine import FiniteStateMachine, SeekState, RandomWalkState
 from behavior_tree import KamikazeBehaviorTree
 
 vec2 = pygame.math.Vector2
@@ -36,9 +36,6 @@ avoid_list =[]
 leadingdrone = LeadingDrone(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, FiniteStateMachine( SeekState() ), screenSimulation.screen)
 avoid_list.append(leadingdrone.location)
 
-
-# simulation = Simulation(roomba)
-
 run = True
 while run:
     # Draws at every dt
@@ -64,9 +61,9 @@ while run:
                 #set target for all loyal wingman
                 simulation.goto_formation(list_pos) 
                
-            # right button - New Drone
+            # right button - New KAMIKAZE
             if pygame.mouse.get_pressed()[2] == True:
-                simulation.add_new_uav()              
+                simulation.add_new_kamikaze()              
                 
     # Background
     #screenSimulation.screen.fill(LIGHT_BLUE)
@@ -83,7 +80,7 @@ while run:
     simulation.run_simulation(avoid_list,list_obst)
 
     #set target for all loyal wingman
-    list_pos = leadingdrone.set_formation()
+    list_pos = leadingdrone.set_formation(num_drones= simulation.get_number_running_simultations())
     simulation.goto_formation(list_pos) 
     
     leadingdrone.update()
@@ -98,9 +95,5 @@ while run:
     # Writes the App name in screen
     img = screenSimulation.font24.render('Loyal Wingman Simulation', True, LIGHT_BLUE)
     screenSimulation.screen.blit(img, (20, 20))
-
-    # Debug lines - only to assist the developer
-    #img = screenSimulation.font24.render('Debug lines: '+ drone.get_debug(), True, BLUE)
-    #screenSimulation.screen.blit(img, (20, 40))
 
     pygame.display.flip() 

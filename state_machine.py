@@ -76,7 +76,7 @@ class SeekState(State):
         # Todo: add initialization code
         self.state_name = 'SeekState'
         self.time_executing = 0 #Variavel para contagem do tempo de execução 
-        print('Seek')
+        #print('Seek')
         self.finished = False
 
     def check_transition(self, agent, state_machine):
@@ -442,4 +442,118 @@ class EightState(State):
             self.c = 0
 
         agent.seek_around(self.target)
-       
+
+class RandomWalkState(State):
+    """
+        Drone will seek target  
+    """
+    def __init__(self):
+        # Todo: add initialization code
+        self.state_name = 'RandomWalk'
+        self.time_executing = 0 #Variavel para contagem do tempo de execução 
+        #print('Random')
+        self.finished = False
+        self.target = vec2(random.uniform(0,SCREEN_WIDTH),random.uniform(0,SCREEN_HEIGHT))
+
+    def check_transition(self, agent, state_machine):
+        # Todo: add logic to check and execute state transition
+        
+        # New target from mouse click
+        #if agent.get_target():
+            #self.target = agent.get_target()
+            #agent.set_target(None)
+            #self.sequence = 0 # reinicia movimento
+
+        # chegou ao waypoint
+        if self.finished == True:
+            state_machine.change_state(AttackKamikazeState())  
+             
+    def execute(self, agent):
+        # logic to move drone to target
+        try:
+            self.target
+        except:
+            self.target = agent.get_position()
+
+        agent.arrive(self.target)
+        self.time_executing += SAMPLE_TIME
+
+        if (self.target - agent.location).length() < 10 and self.time_executing > 10:
+            self.finished = True
+
+class AttackKamikazeState(State):
+    """
+        Drone will seek target  
+    """
+    def __init__(self):
+        # Todo: add initialization code
+        self.state_name = 'AttackKamikazeState'
+        self.time_executing = 0 #Variavel para contagem do tempo de execução 
+        #print('AttackKamikazeState')
+        self.finished = False
+        #self.target = vec2(random.uniform(0,SCREEN_WIDTH),random.uniform(0,SCREEN_HEIGHT))
+
+    def check_transition(self, agent, state_machine):
+        # Todo: add logic to check and execute state transition
+        
+        # New target from mouse click
+        #if agent.get_target():
+            #self.target = agent.get_target()
+            #agent.set_target(None)
+            #self.sequence = 0 # reinicia movimento
+
+        # chegou ao waypoint
+        if self.finished == True:
+            state_machine.change_state(AttackKamikazeState())  
+             
+    def execute(self, agent):
+        # logic to move drone to target
+        try:
+            self.target
+        except:
+            agent.define_target()
+            self.target = agent.get_closest_target()
+
+        agent.seek(self.target)
+        self.time_executing += SAMPLE_TIME
+
+        if (self.target - agent.location).length() < 10 or self.time_executing > 0.5:
+            self.finished = True
+
+class WaitState(State):
+    """
+        Drone will seek target  
+    """
+    def __init__(self):
+        # Todo: add initialization code
+        self.state_name = 'WaitState'
+        self.time_executing = 0 #Variavel para contagem do tempo de execução 
+        #print('Random')
+        self.finished = False
+        self.target = vec2(random.uniform(0,0),random.uniform(0,0))
+
+    def check_transition(self, agent, state_machine):
+        # Todo: add logic to check and execute state transition
+        
+        # New target from mouse click
+        #if agent.get_target():
+            #self.target = agent.get_target()
+            #agent.set_target(None)
+            #self.sequence = 0 # reinicia movimento
+
+        # chegou ao waypoint
+        if self.finished == True:
+            state_machine.change_state(AttackKamikazeState())  
+             
+    def execute(self, agent):
+        # logic to move drone to target
+        try:
+            self.target
+        except:
+            self.target = agent.get_position()
+
+        agent.arrive(self.target)
+        self.time_executing += SAMPLE_TIME
+
+        if  self.time_executing > 10:
+            self.finished = True

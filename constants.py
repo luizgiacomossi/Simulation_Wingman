@@ -10,7 +10,7 @@ RESOLUTION = 100 # Of grid
 NUM_OBSTACLES = 2
 RADIUS_OBSTACLES = 40
 DISTANCE_LEADER = 100
-
+NUM_KAMIKAZES = 10
 # Sample Time Parameters
 FREQUENCY = 60.0  # simulation frequency
 SAMPLE_TIME = 1.0 / FREQUENCY  # simulation sample time

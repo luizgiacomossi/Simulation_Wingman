@@ -163,7 +163,7 @@ class Aircraft(pg.sprite.Sprite):
         # defines the sprite's position on the screen
         # take the image size
         self.rect = self.image.get_rect()
-        
+        self.scale = 0.1
         # pega o canto superior esquerdo, posição qualquer
         #self.rect.topleft = 100,100
 
@@ -194,7 +194,7 @@ class Aircraft(pg.sprite.Sprite):
     
         # Rotates image -> angle should be in degrees
         # rotozoom(Surface, angle, scale) -> Surface
-        self.image = pg.transform.rotozoom(self.image, -angle*180/pi - 90, .1)
+        self.image = pg.transform.rotozoom(self.image, -angle*180/pi - 90, self.scale)
         self.rect = self.image.get_rect()
         # positions center of rect in acual drone position
         self.rect.center = position.x,position.y
@@ -260,4 +260,23 @@ class Tree(pg.sprite.Sprite):
         # positions center of rect in acual drone position
         self.rect.midbottom = position.x,position.y+20
 
+class Kamikaze_drone(Aircraft):
+    """
+        Represents a simple visual animated drone 
+        Can load sprites, rotate and update animation
+    """
+    def __init__(self):
+        super().__init__()
+        self.sprites = []
+        for i in range(0,5):
+            self.sprites.append(pg.image.load(f'models/kamikaze/sprite_{i}.png'))
+    
+    def explote(self):
+        self.sprites = []
+        self.scale = 2
+        for i in range(10,30):
+            self.sprites.append(pg.image.load(f'models/kamikaze/explosion/explosion1_00{i}.png'))
+            
 
+        
+ 

@@ -1,7 +1,7 @@
 import pygame as pg
-from utils import Aircraft, random_color, limit, constrain, bivariateFunction, derivativeBivariate, normalFunction
+from utils import Aircraft, random_color, limit, constrain, bivariateFunction, derivativeBivariate, normalFunction, Kamikaze_drone
 from constants import *
-from math import cos, sin, atan2, pi
+from math import cos, sin, atan2, pi,inf
 import random
 import copy 
 
@@ -27,6 +27,8 @@ class Vehicle(object):
         self.acceleration = vec2(0,0)
         self.radius = SIZE_DRONE # Drone Size
         self.desired = vec2()
+        self.team = []
+        self.index = None
 
         self.memory_location = [] # To draw track
         self.rotation = atan2(self.location.y,self.location.x) # inicital rotation
@@ -64,8 +66,10 @@ class Vehicle(object):
         # updates position
         self.location += self.velocity 
         # Prevents it from crazy spinning due to very low noise speeds
-        if self.velocity.length() > 0.8:
-            self.rotation = atan2(self.velocity.y,self.velocity.x)
+        #if self.velocity.length() > 0.3:
+        #self.rotation = atan2(self.velocity.y,self.velocity.x) 
+        k = 2/3
+        self.rotation =  (atan2(self.velocity.y,self.velocity.x) - self.rotation)*k + self.rotation
         # Constrains position to limits of screen 
         self.location = constrain(self.location,SCREEN_WIDTH,SCREEN_HEIGHT)
         self.acceleration *= 0
@@ -280,6 +284,8 @@ class Vehicle(object):
          index: is the current id of drone being checked 
         """
         # gets all positions of simultaneos drones
+        self.index = index
+        self.team = all_positions
         aux = 0 
         soma = vec2(0,0) # sums up all directions of close drones
         count = 0 # counts the number of drones that are close
@@ -320,7 +326,7 @@ class Vehicle(object):
             #pg.draw.line(self.window, (100, 100, 100), self.location, self.location+self.desired , 1)
             # Draw Direction
             v = self.velocity.length()
-            pg.draw.line(self.window, (100, 100, 100), self.location, self.location + self.velocity.normalize()*v*20 , 1)
+            pg.draw.line(self.window, (255, 0, 0), self.location, self.location + self.velocity.normalize()*v*20 , 1)
 
         # usar sprite para desenhar drone
         self.all_sprites.draw(self.window)
@@ -811,7 +817,11 @@ class LeadingDrone(Vehicle):
             input: number of drones in formation
             return: list of positions
         '''
-        step_angle = 2 * pi / num_drones 
+        if num_drones > 1: # check if there is still loyalwingmen
+            step_angle = 2 * pi / num_drones 
+        else:
+            step_angle = 0
+
         pos = self.get_position()
         #print(f'position leader:{pos}')
         ang = 0
@@ -846,7 +856,7 @@ class LoyalWingman(Vehicle):
         #kp = 50
         #kv = 800
         xi=0.9
-        wn=20/60
+        wn=15/60
         kv = 2*MASS*xi*wn
         kp = MASS*wn**2
         self.desired = kp * (target - self.location) - kv * self.velocity
@@ -883,14 +893,78 @@ class LoyalWingman(Vehicle):
                     
                 self.applyForce(-f_repulsion)
 
-
 class Kamikaze(Vehicle):
     '''
         The kamikaze drones are using behavior tree to operate
     '''
-    def __init__(self, x, y, behavior, window):
+    def __init__(self, x, y, behavior, window, LoyalWingmen = []):
         super().__init__(x, y, behavior, window)
 
-        self.behavior = behavior
+        # Variables to draw drone using Sprites
+        self.drone = Kamikaze_drone() 
+        self.all_sprites = pg.sprite.Group()
+        self.all_sprites.add(self.drone)
+        self.loyalwingmen = LoyalWingmen
+        self.closest_loyal = self.get_position()
+        self.explode = False
+        self.timer_explotion = 0
+
+    def define_target(self):
+        '''
+            Criteria to select a loyal wingman to attack
+        '''
+        closest_loyal = vec2(inf,inf)
+        index_loyal = 0
+
+        if len(self.loyalwingmen) > 0:
+            for l in self.loyalwingmen:
+                pos = l.get_position()
+                distance_to_loyalwingman = (self.get_position() - pos).length()
+
+                if distance_to_loyalwingman < closest_loyal.magnitude():
+                    closest_loyal = pos
+                
+                if distance_to_loyalwingman < 40:
+                    self.drone.explote()
+
+                if distance_to_loyalwingman < SIZE_DRONE*2: # Radius of explotion
+                    self.loyalwingmen.pop(index_loyal)
+                    self.explode = 'Count' #
+                
+                index_loyal += 1
+        else: # no more loyalwing left
+            if self.leader_position: # leader is the last
+                closest_loyal = self.leader_position
+            else:# no more drones left
+                closest_loyal = self.get_position()
+
+
+        self.closest_loyal = closest_loyal
+
+    def get_closest_target(self):
+        '''
+            Return target to attack
+        '''
+        return self.closest_loyal
+           
+    def explode(self, index):
+        self.loyalwingmen.pop(index)
+
+    def get_explode_state(self):
+        '''
+            Return drone explosion state to delete simulation
+            self.explode == 'Count' counts time for animation : 1 second
+        
+        '''
+        if self.explode == 'Count': # 'Count is used to know that it have to count for animation'
+            self.timer_explotion += 1
+            self.velocity *= 0 
+            if self.timer_explotion > 10:
+                return True
+        return self.explode
+
+    def set_leader_position(self, leader_position):
+        self.leader_position = leader_position      
+        
 
 
