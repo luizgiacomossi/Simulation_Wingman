@@ -271,7 +271,7 @@ class Kamikaze_drone(Aircraft):
         for i in range(0,5):
             self.sprites.append(pg.image.load(f'models/kamikaze/sprite_{i}.png'))
     
-    def explote(self):
+    def explode(self):
         self.sprites = []
         self.scale = 2
         for i in range(10,30):

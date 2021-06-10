@@ -42,7 +42,7 @@ class Simulation(object):
             self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
             #Instantiate drone 
             #drone = LoyalWingman(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
-            drone = LoyalWingman(random.uniform(10,SCREEN_WIDTH), 10, self.behaviors[-1], self.screenSimulation.screen)
+            drone = LoyalWingman(random.uniform(SCREEN_WIDTH - 300,SCREEN_WIDTH), random.uniform(0 ,30), self.behaviors[-1], self.screenSimulation.screen)
             self.swarm.append(drone)
 
         for d in range(0, NUM_KAMIKAZES):

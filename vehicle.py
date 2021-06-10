@@ -376,22 +376,6 @@ class Vehicle(object):
                     
                 self.applyForce(-f_repulsion)
 
-    def bouncing(self):
-        """
-            Bouncing Behavior
-            NOT USED
-        """
-
-        if self.location.x + self.radius > SCREEN_WIDTH or self.location.x - self.radius< 0:
-            self.velocity.x *= -1
-        if self.location.y + self.radius> SCREEN_HEIGHT or self.location.y- self.radius < 0:
-            self.velocity.y *= -1
-
-        self.location += self.velocity
-
-    # Deleting (Calling destructor)
-    def __del__(self):
-        print('Drone Deleted')
 
 class VehiclePF(object):
 
@@ -838,10 +822,6 @@ class LeadingDrone(Vehicle):
 
         return list_positions
 
-    # Deleting (Calling destructor)
-    def __del__(self):
-        print('Drone Deleted')
-
 class LoyalWingman(Vehicle):
     def __init__(self, x, y, behavior, window):
         super().__init__(x, y, behavior, window)
@@ -893,6 +873,10 @@ class LoyalWingman(Vehicle):
                     
                 self.applyForce(-f_repulsion)
 
+   # Deleting (Calling destructor)
+    def __del__(self):
+        print('Loyalwingman destroyed')
+
 class Kamikaze(Vehicle):
     '''
         The kamikaze drones are using behavior tree to operate
@@ -916,23 +900,23 @@ class Kamikaze(Vehicle):
         closest_loyal = vec2(inf,inf)
         index_loyal = 0
 
-        if len(self.loyalwingmen) > 0:
+        if len(self.loyalwingmen) > 0: # check if there are loyalwingman 
             for l in self.loyalwingmen:
-                pos = l.get_position()
+                pos = l.get_position() # position of loyalwingman
                 distance_to_loyalwingman = (self.get_position() - pos).length()
 
                 if distance_to_loyalwingman < closest_loyal.magnitude():
                     closest_loyal = pos
                 
                 if distance_to_loyalwingman < 40:
-                    self.drone.explote()
+                    self.drone.explode()
 
                 if distance_to_loyalwingman < SIZE_DRONE*2: # Radius of explotion
                     self.loyalwingmen.pop(index_loyal)
                     self.explode = 'Count' #
                 
                 index_loyal += 1
-        else: # no more loyalwing left
+        else: # no more loyalwingman left
             if self.leader_position: # leader is the last
                 closest_loyal = self.leader_position
             else:# no more drones left
@@ -959,12 +943,13 @@ class Kamikaze(Vehicle):
         if self.explode == 'Count': # 'Count is used to know that it have to count for animation'
             self.timer_explotion += 1
             self.velocity *= 0 
-            if self.timer_explotion > 10:
+            if self.timer_explotion > 5:
                 return True
         return self.explode
 
     def set_leader_position(self, leader_position):
         self.leader_position = leader_position      
         
-
+    def __del__(self):
+        print('Kamikaze exploded')
 
