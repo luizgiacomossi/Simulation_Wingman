@@ -1,4 +1,4 @@
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT, PIX2M, M2PIX,SIZE_DRONE, RED
+from constants import *
 import pygame as pg
 from math import atan2, pi, exp
 import random
@@ -6,6 +6,33 @@ import copy
 import numpy as np
 vec = pg.math.Vector2 
 
+class Explosion_kamikaze(object):
+    def __init__(self, position, window):
+        super().__init__()
+        self.explosion_animation =  Explosion(position)
+        self.all_sprites = pg.sprite.Group()
+        self.all_sprites.add(self.explosion_animation)
+        self.window = window
+        self.timer = 0
+        self.position = position
+        self.delete_explosion = False
+
+    def count(self):
+        self.timer += SAMPLE_TIME
+        if self.timer > TIME_EXPLOSION:
+            self.delete_explosion = True
+    
+    def draw(self):
+        self.count()
+        # usar sprite para desenhar drone
+        self.all_sprites.draw(self.window)
+        self.all_sprites.update(self.position, 0)
+    
+    def delete_explosion_status(self):
+        return self.delete_explosion
+
+    
+    
 class Aircraft(pg.sprite.Sprite):
     """
         Represents a simple visual animated drone 
@@ -123,6 +150,37 @@ class Kamikaze_drone(Aircraft):
         for i in range(10,30):
             self.sprites.append(pg.image.load(f'models/kamikaze/explosion/explosion1_00{i}.png'))
             
+class Explosion(pg.sprite.Sprite):
+    """
+        Represents a  animated explosion 
+    """
+    def __init__(self, position):
+        pg.sprite.Sprite.__init__(self)
+        self.sprites = []
+        self.scale = 2
 
+        for i in range(10,30):
+            self.sprites.append(pg.image.load(f'models/kamikaze/explosion/explosion1_00{i}.png'))
+            #self.sprites[i-1] =  pg.transform.rotozoom(self.sprites[i-1], 0, .3)
+
+        self.current = 0
+        # inherited from the pygame sprite class it is the first element of the drone
+        self.image = self.sprites[self.current]
+        self.rect = self.image.get_rect()
+        self.rect.midbottom = position.x,position.y+20
+
+
+    def update(self, position, angle, size = SIZE_DRONE* PIX2M):
         
- 
+        # animation update speed is controle by this parameter
+        self.current += 1
+        if self.current >= len(self.sprites)-1:
+            self.current = 0
+
+        self.image = self.sprites[round(self.current)]
+        # Rotates image -> angle should be in degrees
+        # rotozoom(Surface, angle, scale) -> Surface
+        #self.image = pg.transform.rotozoom(self.image, 0, .2)
+        self.rect = self.image.get_rect()
+        # positions center of rect in acual drone position
+        self.rect.midbottom = position.x,position.y+20

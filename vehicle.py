@@ -5,7 +5,7 @@ from animation import Aircraft, Kamikaze_drone
 from math import cos, sin, atan2, pi, inf
 import random
 import copy 
-from utils import Weapon
+from weapons import Weapon
 import numpy as np
 
 vec2 = pg.math.Vector2
@@ -161,6 +161,7 @@ class Vehicle(object):
         # Simulates Wind - random Noise
         #wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
         #self.applyForce(wind)
+
         # Draws current target as a point 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
@@ -832,6 +833,7 @@ class LoyalWingman(Vehicle):
         self.kamikazes = []
         self.closest_kamikaze = vec2(inf,inf)
         self.distance_closest_kamikaze = inf
+        self.attack_status = ( vec2(0,0) , False ) # position attacked and sucessfull or not
 
     def receive_list_kamikazes(self, kamikazes):
         self.kamikazes = kamikazes
@@ -904,20 +906,18 @@ class LoyalWingman(Vehicle):
 
     def fire_vaporizer(self, kamikaze_position):
         # check distance
-        print(f' Atirei no kamikaze me {kamikaze_position}')
+        #print(f' Atirei no kamikaze me {kamikaze_position}')
         try:
+            self.attack_status = (  kamikaze_position, True )
             self.kamikazes.pop(self.index_closest)
         except:
             print('All kamikazes were destroyed')
 
-        #d = self.location.distance_to(kamikaze_position)
-        #if d < self.vaporizer_gun.range_of_fire:
-            ##shot
-            #self.vaporizer_gun.fire()
+    def check_attack(self):
+        return self.attack_status
 
-        # if > go to kamikaze 
-            # when in range -> shot
-         
+    def update_attack_status(self):
+        self.attack_status = (self.attack_status[1], False)
 
    # Deleting (Calling destructor)
     def __del__(self):
@@ -953,18 +953,19 @@ class Kamikaze(Vehicle):
 
                 if distance_to_loyalwingman < closest_loyal.magnitude():
                     closest_loyal = pos
-                
-                if distance_to_loyalwingman < 40:
-                    self.drone.explode()
 
                 if distance_to_loyalwingman < SIZE_DRONE*2: # Radius of explotion
-                    self.loyalwingmen.pop(index_loyal)
-                    self.explode = 'Count' #
+                    self.explode_loyalwingman(index_loyal)
+                    self.explode = True # Self destruction command
                 
                 index_loyal += 1
         else: # no more loyalwingman left
             if self.leader_position: # leader is the last
                 closest_loyal = self.leader_position
+                distance_to_leader = self.location.distance_to(self.leader_position)
+                if distance_to_leader < SIZE_DRONE*2: 
+                    self.explode = True #
+
             else:# no more drones left
                 closest_loyal = self.get_position()
 
@@ -977,25 +978,20 @@ class Kamikaze(Vehicle):
         '''
         return self.closest_loyal
            
-    def explode(self, index):
+    def explode_loyalwingman(self, index):
         self.loyalwingmen.pop(index)
 
     def get_explode_state(self):
         '''
             Return drone explosion state to delete simulation
-            self.explode == 'Count' counts time for animation : 1 second
-        
         '''
-        if self.explode == 'Count': # 'Count is used to know that it have to count for animation'
-            self.timer_explotion += 1
-            self.velocity *= 0 
-            if self.timer_explotion > 5:
-                return True
         return self.explode
 
     def set_leader_position(self, leader_position):
         self.leader_position = leader_position      
         
     def __del__(self):
-        print('Kamikaze exploded')
+        #print('Kamikaze exploded')
+        pass
+
 

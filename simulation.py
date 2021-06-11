@@ -5,6 +5,8 @@ from state_machine import *
 import random
 from behavior_tree import *
 from decision_making import *
+from animation import Explosion_kamikaze
+from utils import generate_coordenates_kamikaze
 
 vec2 = pygame.math.Vector2
 ##=========================
@@ -37,6 +39,7 @@ class Simulation(object):
         # Current simulations 
         self.swarm = []
         self.kamikazes = []
+        self.explosions = []
 
     def create_swarm_uav(self, num_swarm):
         # Create N simultaneous Drones
@@ -48,10 +51,10 @@ class Simulation(object):
             drone = LoyalWingman(random.uniform(SCREEN_WIDTH - 300,SCREEN_WIDTH), random.uniform(0 ,30), self.behaviors[-1], self.screenSimulation.screen)
             self.swarm.append(drone)
 
-        for d in range(0, NUM_KAMIKAZES):
+        for d in range(0, NUM_KAMIKAZES): # creating kamikaze swarm
             self.behaviors.append( FiniteStateMachine( WaitState() ) ) # Inicial state
             #Instantiate kamikazes 
-            drone = Kamikaze(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
+            drone = Kamikaze( random.uniform(0,50), random.uniform(0,50), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
             self.kamikazes.append(drone)
 
     def add_new_uav(self):
@@ -67,6 +70,13 @@ class Simulation(object):
     
     def append_uav(self, drone):
         self.swarm.append(drone)
+
+    def create_kamikaze(self):
+        self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) ) # Inicial state
+        #Instantiate kamikazes 
+        position = generate_coordenates_kamikaze()
+        drone = Kamikaze( position[0], position[1], self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
+        self.kamikazes.append(drone)  
 
     def create_leading_drone(self):
         pass
@@ -95,7 +105,11 @@ class Simulation(object):
             _.collision_avoidance_leader(pos_leader)
             _.update()
             _.draw(self.screenSimulation.screen)
-            _.receive_list_kamikazes(self.kamikazes)
+            _.receive_list_kamikazes(self.kamikazes)    
+            attack_status = _.check_attack()
+            if attack_status[1]: # create explosion of kamikaze destroyed
+                    self.explosions.append(Explosion_kamikaze( attack_status[0], self.screenSimulation.screen ))
+                    _.update_attack_status()
 
             # index to keep track of  drone in the list
             index += 1
@@ -124,6 +138,11 @@ class Simulation(object):
             #_.collision_avoidance_leader(pos_leader)
             _.update()
             _.draw(self.screenSimulation.screen) 
+            # getting if drone exploded 
+            explode_status = _.get_explode_state()
+            if explode_status: # Exploded
+                self.explosions.append(Explosion_kamikaze( _.location, self.screenSimulation.screen ))
+            
             # index to keep track of  drone in the list
             index += 1
             # writes drone id
@@ -132,8 +151,19 @@ class Simulation(object):
             # writes drone current behavior
             img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
             self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+
             if _.get_explode_state() == True: # delete kamikaze after explotion
                 self.kamikazes.pop(index-1)
+
+        if len(self.kamikazes) < NUM_KAMIKAZES: # Keeps contants number of kamikazes
+            self.create_kamikaze()
+
+
+        # update explosions
+        for index, _ in enumerate(self.explosions):
+            _.draw() # Updates explosion on screen
+            if _.delete_explosion_status(): # check if it is time to delete
+                self.explosions.pop(index)
 
     def add_new_kamikaze(self):
         self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) )

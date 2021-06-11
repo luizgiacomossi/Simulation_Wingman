@@ -142,6 +142,28 @@ def constrain3d(v3,w,h,alt):
         v3.z = -h
     return v3
 
+def generate_coordenates_kamikaze():
+    alpha_random = random.uniform(0,1)
+    
+    if alpha_random < 0.5:
+        if alpha_random < 0.25:
+            # x = 0 y = random
+            position = vec(0, random.uniform(0,SCREEN_HEIGHT))
+        else:
+            # x = random y = 0
+            position = vec(random.uniform(0,SCREEN_WIDTH), 0)
+    else:
+        if alpha_random < 0.75:
+            # y = SCREEN_HEIGHT x = ramdom
+            position = vec(random.uniform(0,SCREEN_WIDTH), SCREEN_HEIGHT)
+        else:
+            # y = 0 x = SCREEN_WIDTH
+            position = vec(SCREEN_WIDTH, random.uniform(0,SCREEN_HEIGHT))
+
+    return position
+
+
+
 class FlowField():
     def __init__(self, resolution):
 
@@ -159,17 +181,4 @@ class FlowField():
             for y in range(0, SCREEN_HEIGHT, blockSize):
                 rect = pg.Rect(x, y, blockSize, blockSize)
                 pg.draw.rect(screen, (200,200,200), rect, 1)
-
-class Weapon(object):
-    def __init__(self, cooldown, num_cartrides, rate_of_fire, range_of_fire):
-        self.cooldown = cooldown
-        self.num_cartrides = num_cartrides 
-        self.rate_of_fire = rate_of_fire
-        self.range_of_fire = range_of_fire
-    
-    def fire(self):
-        print('atirei')
-        
-    def load(self):
-        print('carregando')
 

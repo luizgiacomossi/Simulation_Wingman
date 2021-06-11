@@ -1,4 +1,5 @@
 from behavior_tree import *
+from constants import *
 
 
 class LoyalWingmanBehaviorTree(BehaviorTree):
@@ -77,7 +78,7 @@ class DefendLeaderNode(LeafNode):
 
         self.time_cooldown += SAMPLE_TIME
 
-        if agent.distance_closest_kamikaze < 100 and self.time_cooldown > 2:
+        if agent.distance_closest_kamikaze < 100 and self.time_cooldown > COOLDOWN_VAPORIZER:
             self.time_cooldown  = 0
             agent.fire_vaporizer(agent.closest_kamikaze)
 

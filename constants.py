@@ -7,10 +7,10 @@ NUM_DRONES = 7# Number of simultaneous drones
 SIZE_DRONE = 18
 SIZE_TRACK = 100
 RESOLUTION = 100 # Of grid
-NUM_OBSTACLES = 2
+NUM_OBSTACLES = 10
 RADIUS_OBSTACLES = 40
 DISTANCE_LEADER = 100
-NUM_KAMIKAZES = 1
+NUM_KAMIKAZES = 5
 # Sample Time Parameters
 FREQUENCY = 60.0  # simulation frequency
 SAMPLE_TIME = 1.0 / FREQUENCY  # simulation sample time
@@ -29,3 +29,10 @@ BLACK = (0,0,0)
 LIGHT_BLUE = (224, 255, 255)
 BLUE = (0,0,255)
 RED = (255,0,0)
+
+# Weapons parameters
+COOLDOWN_VAPORIZER = 1
+CARTRIDGES_VAPORIZER = 10
+
+# explosion parameteres
+TIME_EXPLOSION = 0.3
