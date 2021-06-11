@@ -7,7 +7,6 @@ from obstacle import Obstacles
 from simulation import Simulation, ScreenSimulation
 from vehicle import LeadingDrone, LoyalWingman, Kamikaze
 from state_machine import FiniteStateMachine, SeekState, RandomWalkState
-from behavior_tree import KamikazeBehaviorTree
 
 vec2 = pygame.math.Vector2
 ##=========================

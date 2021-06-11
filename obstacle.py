@@ -1,6 +1,6 @@
 import random
 import pygame as pg
-from utils import Tree
+from animation import Tree
 
 vec2 = pg.math.Vector2
 

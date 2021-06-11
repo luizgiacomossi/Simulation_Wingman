@@ -1,9 +1,12 @@
 import pygame as pg
-from utils import Aircraft, random_color, limit, constrain, bivariateFunction, derivativeBivariate, normalFunction, Kamikaze_drone
+from utils import random_color, limit, constrain, bivariateFunction, derivativeBivariate, normalFunction
 from constants import *
-from math import cos, sin, atan2, pi,inf
+from animation import Aircraft, Kamikaze_drone
+from math import cos, sin, atan2, pi, inf
 import random
 import copy 
+from utils import Weapon
+import numpy as np
 
 vec2 = pg.math.Vector2
 
@@ -375,7 +378,6 @@ class Vehicle(object):
                     self.applyForce(- self.velocity.normalize()*self.max_speed) 
                     
                 self.applyForce(-f_repulsion)
-
 
 class VehiclePF(object):
 
@@ -826,7 +828,34 @@ class LoyalWingman(Vehicle):
     def __init__(self, x, y, behavior, window):
         super().__init__(x, y, behavior, window)
         self.error = vec2(0,0)
-    
+        self.vaporizer_gun = Weapon(1,10,1,100)
+        self.kamikazes = []
+        self.closest_kamikaze = vec2(inf,inf)
+        self.distance_closest_kamikaze = inf
+
+    def receive_list_kamikazes(self, kamikazes):
+        self.kamikazes = kamikazes
+        self.check_distance_kamikazes()
+
+    def check_distance_kamikazes(self):
+        p = self.location 
+        closest = vec2(inf,inf)
+        closest_distance = inf
+        self.index_closest = 0
+
+        for index ,k in enumerate(self.kamikazes):
+            distance = (p - k.location).magnitude()
+            if distance < closest_distance:
+                closest_distance = distance
+                closest = k.location
+                self.index_closest = index
+        
+        
+        self.closest_kamikaze = closest
+        self.distance_closest_kamikaze = closest_distance
+        if closest_distance < 100:
+            pg.draw.line(self.window, (100, 0, 0), self.location, self.closest_kamikaze , 1)
+
     def arrive(self, target):
         """
             Arrive using position controler PV
@@ -872,6 +901,23 @@ class LoyalWingman(Vehicle):
                     self.applyForce(- self.velocity.normalize()*self.max_speed) 
                     
                 self.applyForce(-f_repulsion)
+
+    def fire_vaporizer(self, kamikaze_position):
+        # check distance
+        print(f' Atirei no kamikaze me {kamikaze_position}')
+        try:
+            self.kamikazes.pop(self.index_closest)
+        except:
+            print('All kamikazes were destroyed')
+
+        #d = self.location.distance_to(kamikaze_position)
+        #if d < self.vaporizer_gun.range_of_fire:
+            ##shot
+            #self.vaporizer_gun.fire()
+
+        # if > go to kamikaze 
+            # when in range -> shot
+         
 
    # Deleting (Calling destructor)
     def __del__(self):

@@ -3,6 +3,8 @@ from constants import *
 from vehicle import Vehicle, VehiclePF, LoyalWingman, Kamikaze
 from state_machine import *
 import random
+from behavior_tree import *
+from decision_making import *
 
 vec2 = pygame.math.Vector2
 ##=========================
@@ -39,7 +41,8 @@ class Simulation(object):
     def create_swarm_uav(self, num_swarm):
         # Create N simultaneous Drones
         for d in range(0, num_swarm):
-            self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
+            #self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
+            self.behaviors.append( LoyalWingmanBehaviorTree() ) 
             #Instantiate drone 
             #drone = LoyalWingman(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
             drone = LoyalWingman(random.uniform(SCREEN_WIDTH - 300,SCREEN_WIDTH), random.uniform(0 ,30), self.behaviors[-1], self.screenSimulation.screen)
@@ -91,14 +94,16 @@ class Simulation(object):
             _.collision_avoidance(self.swarm,list_obst,index) 
             _.collision_avoidance_leader(pos_leader)
             _.update()
-            _.draw(self.screenSimulation.screen) 
+            _.draw(self.screenSimulation.screen)
+            _.receive_list_kamikazes(self.kamikazes)
+
             # index to keep track of  drone in the list
             index += 1
             # writes drone id
             img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, LIGHT_BLUE)
             self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
             # writes drone current behavior
-            #img = self.screenSimulation.font20.render(_.behavior.get_current_state(), True, BLUE)
+            #img = self.screenSimulation.font20.render(_.behavior.node_name, True, BLUE)
             #self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
             # writes drone current position in column and row
             p = _.get_position()
@@ -132,7 +137,7 @@ class Simulation(object):
 
     def add_new_kamikaze(self):
         self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) )
-        drone = Kamikaze(0, 0, self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
+        drone = Kamikaze(0, random.uniform(0,SCREEN_HEIGHT), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
         self.kamikazes.append(drone)
 
     def get_number_running_simultations(self):
