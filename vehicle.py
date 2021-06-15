@@ -5,7 +5,7 @@ from animation import Aircraft, Kamikaze_drone
 from math import cos, sin, atan2, pi, inf
 import random
 import copy 
-from weapons import Weapon
+from weapons import *
 import numpy as np
 
 vec2 = pg.math.Vector2
@@ -829,8 +829,8 @@ class LoyalWingman(Vehicle):
     def __init__(self, x, y, behavior, window):
         super().__init__(x, y, behavior, window)
         self.error = vec2(0,0)
-        self.vaporizer_gun = Weapon(1,10,1,100)
-        self.kamikazes = []
+        self.kamikazes = None
+        self.vaporizer_gun = Vaporizer(1,10,1,100,self.kamikazes)
         self.closest_kamikaze = vec2(inf,inf)
         self.distance_closest_kamikaze = inf
         self.attack_status = ( vec2(0,0) , False ) # position attacked and sucessfull or not
@@ -838,6 +838,7 @@ class LoyalWingman(Vehicle):
     def receive_list_kamikazes(self, kamikazes):
         self.kamikazes = kamikazes
         self.check_distance_kamikazes()
+        self.vaporizer_gun.receive_list_kamikazes(kamikazes)
 
     def check_distance_kamikazes(self):
         p = self.location 
@@ -850,11 +851,12 @@ class LoyalWingman(Vehicle):
             if distance < closest_distance:
                 closest_distance = distance
                 closest = k.location
-                self.index_closest = index
+                self.index_closest = index 
         
         
         self.closest_kamikaze = closest
         self.distance_closest_kamikaze = closest_distance
+
         if closest_distance < 100:
             pg.draw.line(self.window, (100, 0, 0), self.location, self.closest_kamikaze , 1)
 
@@ -905,11 +907,12 @@ class LoyalWingman(Vehicle):
                 self.applyForce(-f_repulsion)
 
     def fire_vaporizer(self, kamikaze_position):
-        # check distance
+        # check distanceß
         #print(f' Atirei no kamikaze me {kamikaze_position}')
         try:
             self.attack_status = (  kamikaze_position, True )
-            self.kamikazes.pop(self.index_closest)
+            self.vaporizer_gun.fire(self.index_closest)
+            #self.kamikazes.pop(self.index_closest)
         except:
             print('All kamikazes were destroyed')
 
@@ -944,6 +947,7 @@ class Kamikaze(Vehicle):
             Criteria to select a loyal wingman to attack
         '''
         closest_loyal = vec2(inf,inf)
+        distance_closest = inf
         index_loyal = 0
 
         if len(self.loyalwingmen) > 0: # check if there are loyalwingman 
@@ -951,7 +955,8 @@ class Kamikaze(Vehicle):
                 pos = l.get_position() # position of loyalwingman
                 distance_to_loyalwingman = (self.get_position() - pos).length()
 
-                if distance_to_loyalwingman < closest_loyal.magnitude():
+                if distance_to_loyalwingman < distance_closest:
+                    distance_closest = distance_to_loyalwingman
                     closest_loyal = pos
 
                 if distance_to_loyalwingman < SIZE_DRONE*2: # Radius of explotion
