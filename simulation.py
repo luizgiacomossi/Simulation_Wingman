@@ -105,7 +105,9 @@ class Simulation(object):
             _.collision_avoidance_leader(pos_leader)
             _.update()
             _.draw(self.screenSimulation.screen)
-            _.receive_list_kamikazes(self.kamikazes)    
+            _.receive_list_kamikazes(self.kamikazes)   
+
+            # attack logic
             attack_status = _.check_attack()
             if attack_status[1]: # create explosion of kamikaze destroyed
                     self.explosions.append(Explosion_kamikaze( attack_status[0], self.screenSimulation.screen ))
@@ -123,6 +125,11 @@ class Simulation(object):
             p = _.get_position()
             col =  int(p.x/RESOLUTION) + 1
             row = int(p.y/RESOLUTION) + 1
+
+            # writes drone ammo available
+            ammo_vaporizer = _.vaporizer_gun.get_ammo_available()
+            img = self.screenSimulation.font15.render(f'V: {ammo_vaporizer} F:{0} ', True, LIGHT_BLUE)
+            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
             #img = self.screenSimulation.font20.render(f'Pos:{col},{row}', True, BLUE)
             #self.screenSimulation.screen.blit(img, _.get_position()+(0,40))
         
@@ -152,12 +159,12 @@ class Simulation(object):
             img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
             self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
 
+
             if _.get_explode_state() == True: # delete kamikaze after explotion
                 self.kamikazes.pop(index-1)
 
         if len(self.kamikazes) < NUM_KAMIKAZES: # Keeps contants number of kamikazes
             self.create_kamikaze()
-
 
         # update explosions
         for index, _ in enumerate(self.explosions):

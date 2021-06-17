@@ -67,7 +67,8 @@ class DefendLeaderNode(LeafNode):
         super().__init__("Defend Leader")
         # Todo: add initialization code
         # Contagem do tempo de execucao Move Forward
-        self.time_cooldown = 0 
+        self.time_cooldown_vaporizer = 0 
+        self.time_cooldown_freezing = 0 
 
     def enter(self, agent):
         # Todo: add enter logic
@@ -76,11 +77,16 @@ class DefendLeaderNode(LeafNode):
     def execute(self, agent):
         # Todo: add execution logic
 
-        self.time_cooldown += SAMPLE_TIME
+        self.time_cooldown_vaporizer += SAMPLE_TIME
+        self.time_cooldown_freezing += SAMPLE_TIME
 
-        if agent.distance_closest_kamikaze < 100 and self.time_cooldown > COOLDOWN_VAPORIZER:
-            self.time_cooldown  = 0
+        if agent.distance_closest_kamikaze < 100 and self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
+            self.time_cooldown_vaporizer  = 0
             agent.fire_vaporizer(agent.closest_kamikaze)
+
+        if agent.distance_closest_kamikaze < 300 and self.time_cooldown_freezing > COOLDOWN_FREEZING:
+            self.time_cooldown_freezing  = 0
+            agent.fire_freezing(agent.closest_kamikaze)
 
 
         # retorno Status

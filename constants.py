@@ -14,7 +14,7 @@ NUM_KAMIKAZES = 5
 # Sample Time Parameters
 FREQUENCY = 60.0  # simulation frequency
 SAMPLE_TIME = 1.0 / FREQUENCY  # simulation sample time
-
+FREEZING_FACTOR = 1/3
 # Behavior Parameters
 FORWARD_SPEED = 2  # default linear speed when going forward
 ANGULAR_SPEED = 1.5# default angular speed
@@ -33,6 +33,9 @@ RED = (255,0,0)
 # Weapons parameters
 COOLDOWN_VAPORIZER = 1
 CARTRIDGES_VAPORIZER = 10
+COOLDOWN_FREEZING = 1
+CARTRIDGES_FREEZING= 10
+TIME_FROZEN = 5
 
 # explosion parameteres
 TIME_EXPLOSION = 0.3

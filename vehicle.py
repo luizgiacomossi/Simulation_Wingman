@@ -831,6 +831,7 @@ class LoyalWingman(Vehicle):
         self.error = vec2(0,0)
         self.kamikazes = None
         self.vaporizer_gun = Vaporizer(1,10,1,100,self.kamikazes)
+        self.freezing_gun  = Freezing(1,10,1,300,self.kamikazes)
         self.closest_kamikaze = vec2(inf,inf)
         self.distance_closest_kamikaze = inf
         self.attack_status = ( vec2(0,0) , False ) # position attacked and sucessfull or not
@@ -839,6 +840,7 @@ class LoyalWingman(Vehicle):
         self.kamikazes = kamikazes
         self.check_distance_kamikazes()
         self.vaporizer_gun.receive_list_kamikazes(kamikazes)
+        self.freezing_gun.receive_list_kamikazes(kamikazes)
 
     def check_distance_kamikazes(self):
         p = self.location 
@@ -856,6 +858,9 @@ class LoyalWingman(Vehicle):
         
         self.closest_kamikaze = closest
         self.distance_closest_kamikaze = closest_distance
+        
+        if closest_distance < 300:
+            pg.draw.line(self.window, (0, 100, 0), self.location, self.closest_kamikaze , 1)
 
         if closest_distance < 100:
             pg.draw.line(self.window, (100, 0, 0), self.location, self.closest_kamikaze , 1)
@@ -910,9 +915,18 @@ class LoyalWingman(Vehicle):
         # check distanceß
         #print(f' Atirei no kamikaze me {kamikaze_position}')
         try:
-            self.attack_status = (  kamikaze_position, True )
-            self.vaporizer_gun.fire(self.index_closest)
-            #self.kamikazes.pop(self.index_closest)
+            # check if attack was successful or not
+            status = self.vaporizer_gun.fire(self.index_closest)
+            self.attack_status = (  kamikaze_position, status )
+        except:
+            print('All kamikazes were destroyed')
+
+    def fire_freezing(self, kamikaze_position):
+        # check distanceß
+        #print(f' Atirei no kamikaze me {kamikaze_position}')
+        try:
+            # check if attack was successful or not
+            status = self.freezing_gun.fire(self.index_closest)
         except:
             print('All kamikazes were destroyed')
 
@@ -941,6 +955,43 @@ class Kamikaze(Vehicle):
         self.closest_loyal = self.get_position()
         self.explode = False
         self.timer_explotion = 0
+
+        #timer for slowdown after freezing gun
+        self.freezing_timer = TIME_FROZEN
+        self.freezing = False
+
+    def update(self):
+        """
+            Standart Euler integration
+            Updates state machine
+        """
+        # updates behavior in machine state
+        self.behavior.update(self)
+        # Updates velocity at every step and limits it to max_speed
+        self.velocity += self.acceleration * 1 
+        self.velocity = limit(self.velocity, self.max_speed ) 
+        # updates position
+        # FREEZING LOGIC
+        if self.freezing and self.freezing_timer > 0 :
+            self.location += self.velocity * FREEZING_FACTOR 
+            self.freezing_timer -= SAMPLE_TIME
+        else:
+            self.location += self.velocity
+
+        # Prevents it from crazy spinning due to very low noise speeds
+        #if self.velocity.length() > 0.3:
+        #self.rotation = atan2(self.velocity.y,self.velocity.x) 
+        k = 2/3
+        self.rotation =  (atan2(self.velocity.y,self.velocity.x) - self.rotation)*k + self.rotation
+        # Constrains position to limits of screen 
+        self.location = constrain(self.location,SCREEN_WIDTH,SCREEN_HEIGHT)
+        self.acceleration *= 0
+
+        # Memory of positions to draw Track
+        self.memory_location.append((self.location.x,self.location.y))
+        # size of track 
+        if len(self.memory_location) > SIZE_TRACK:
+            self.memory_location.pop(0)    
 
     def define_target(self):
         '''
@@ -995,6 +1046,9 @@ class Kamikaze(Vehicle):
     def set_leader_position(self, leader_position):
         self.leader_position = leader_position      
         
+    def slow_down(self, time = 5):
+        self.freezing = True
+
     def __del__(self):
         #print('Kamikaze exploded')
         pass
