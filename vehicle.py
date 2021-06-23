@@ -21,7 +21,7 @@ class Vehicle(object):
             :param window: pygame screen were it will be draw
         """
 
-        self.debug = False #  debug lines is Off
+        self.debug = True #  debug lines is Off
 
         # Variables used to move drone 
         self.location = vec2(x,y) # Random position in screen
@@ -859,9 +859,9 @@ class LoyalWingman(Vehicle):
         self.closest_kamikaze = closest
         self.distance_closest_kamikaze = closest_distance
         
-        if closest_distance < 300:
-            pg.draw.line(self.window, (0, 100, 0), self.location, self.closest_kamikaze , 1)
 
+
+        # draws vaporizing gun shot
         if closest_distance < 100:
             pg.draw.line(self.window, (100, 0, 0), self.location, self.closest_kamikaze , 1)
 
@@ -927,6 +927,10 @@ class LoyalWingman(Vehicle):
         try:
             # check if attack was successful or not
             status = self.freezing_gun.fire(self.index_closest)
+            # draws freezing gun shot if executed
+            if status:
+                pg.draw.line(self.window, (0, 100, 0), self.location, self.closest_kamikaze , 3)
+
         except:
             print('All kamikazes were destroyed')
 
@@ -959,6 +963,8 @@ class Kamikaze(Vehicle):
         #timer for slowdown after freezing gun
         self.freezing_timer = TIME_FROZEN
         self.freezing = False
+
+        self.debug = False
 
     def update(self):
         """
@@ -1048,6 +1054,29 @@ class Kamikaze(Vehicle):
         
     def slow_down(self, time = 5):
         self.freezing = True
+
+    def arrive(self, target):
+        """
+            Arrive using position controler PV
+        """
+        # Calculates vector desired position
+        #kp = 0.0024
+        #kp = 50
+        #kv = 800
+        xi=0.9
+        wn=15/60
+        kv = 2*MASS*xi*wn
+        kp = MASS*wn**2
+        self.desired = kp * (target - self.location) - kv * self.velocity
+
+        a_desired =  limit(self.desired, self.max_force)
+
+        self.applyForce(a_desired)
+        # Simulates Wind - random Noise
+        #wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
+        #self.applyForce(wind)
+        # Draws current target as a point 
+        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
     def __del__(self):
         #print('Kamikaze exploded')

@@ -101,7 +101,6 @@ class DefendLeaderNode(LeafNode):
 
 
 
-
 class MoveInSpiralNode(LeafNode):
     def __init__(self):
         super().__init__("MoveInSpiral")

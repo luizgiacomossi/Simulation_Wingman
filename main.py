@@ -36,6 +36,7 @@ leadingdrone = LeadingDrone(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, FiniteStateMachine(
 avoid_list.append(leadingdrone.location)
 
 run = True
+accelerated_factor = 1
 while run:
     # Draws at every dt
     screenSimulation.clock.tick(FREQUENCY)
@@ -63,20 +64,24 @@ while run:
             # right button - New KAMIKAZE
             if pygame.mouse.get_pressed()[2] == True:
                 simulation.add_new_kamikaze()              
-                
-    # Background
-    #screenSimulation.screen.fill(LIGHT_BLUE)
-    screenSimulation.screen.blit(background_image, [0, 0])
+        
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:  
+            accelerated_factor += 1
+            print(accelerated_factor)
+
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:   
+            accelerated_factor -= 1
+            print(accelerated_factor)
+
+    simulation.update_background()
     # Draws obstacles:
 
     #updates and draws leading drone
     pygame.draw.circle(screenSimulation.screen,(200, 250, 200), leadingdrone.get_position() , radius=DISTANCE_LEADER, width = 3)
 
-    # draw grid
-    #flow_field.draw(screen)
-
     # updates and draws all simulations  
-    simulation.run_simulation(avoid_list,list_obst)
+
+    simulation.run_simulation(avoid_list,list_obst, accelerated_factor)
 
     #set target for all loyal wingman
     list_pos = leadingdrone.set_formation(num_drones= simulation.get_number_running_simultations())

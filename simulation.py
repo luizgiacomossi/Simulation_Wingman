@@ -21,6 +21,11 @@ class ScreenSimulation(object):
         self.size = SCREEN_WIDTH, SCREEN_HEIGHT 
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode(self.size)
+                #
+        # load backgound
+        self.background_image = pygame.image.load("models/texture/camouflage.png").convert()
+        self.background_image = pygame.transform.scale(self.background_image,(SCREEN_WIDTH,SCREEN_HEIGHT))
+
 
 class kamikaze_control(object):
     def __init__(self, num_kamikazes, screen):
@@ -35,7 +40,7 @@ class Simulation(object):
 
         # state machines for each vehicle
         self.behaviors =[] 
-        
+
         # Current simulations 
         self.swarm = []
         self.kamikazes = []
@@ -95,87 +100,94 @@ class Simulation(object):
             _.set_target(targets[i])
             i += 1
 
-    def run_simulation(self, pos_leader ,list_obst):
+    def run_simulation(self, pos_leader ,list_obst, time_step = 2):
         index = 0 # index is used to track current drone in the simulation list
-        for _ in self.swarm:
-            # checks if drones colided with eachother
-            ## collision avoindance is not implemented yet
-            _.align_swarm(self.swarm,index)
-            _.collision_avoidance(self.swarm,list_obst,index) 
-            _.collision_avoidance_leader(pos_leader)
-            _.update()
-            _.draw(self.screenSimulation.screen)
-            _.receive_list_kamikazes(self.kamikazes)   
+        for i in range(time_step): # accelerated factor 
+            for _ in self.swarm:
+                # checks if drones colided with eachother
+                ## collision avoindance is not implemented yet
+                _.align_swarm(self.swarm,index)
+                _.collision_avoidance(self.swarm,list_obst,index) 
+                _.collision_avoidance_leader(pos_leader)
+                _.update()
+                _.draw(self.screenSimulation.screen)
+                _.receive_list_kamikazes(self.kamikazes)   
 
-            # attack logic
-            attack_status = _.check_attack()
-            if attack_status[1]: # create explosion of kamikaze destroyed
-                    self.explosions.append(Explosion_kamikaze( attack_status[0], self.screenSimulation.screen ))
-                    _.update_attack_status()
+                # attack logic
+                attack_status = _.check_attack()
+                if attack_status[1]: # create explosion of kamikaze destroyed
+                        self.explosions.append(Explosion_kamikaze( attack_status[0], self.screenSimulation.screen ))
+                        _.update_attack_status()
 
-            # index to keep track of  drone in the list
-            index += 1
-            # writes drone id
-            img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
-            # writes drone current behavior
-            #img = self.screenSimulation.font20.render(_.behavior.node_name, True, BLUE)
-            #self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
-            # writes drone current position in column and row
-            p = _.get_position()
-            col =  int(p.x/RESOLUTION) + 1
-            row = int(p.y/RESOLUTION) + 1
+                # index to keep track of  drone in the list
+                index += 1
+                # writes drone id
+                img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, LIGHT_BLUE)
+                self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
+                # writes drone current behavior
+                #img = self.screenSimulation.font20.render(_.behavior.node_name, True, BLUE)
+                #self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+                # writes drone current position in column and row
+                p = _.get_position()
+                col =  int(p.x/RESOLUTION) + 1
+                row = int(p.y/RESOLUTION) + 1
 
-            # writes drone ammo available
-            ammo_vaporizer = _.vaporizer_gun.get_ammo_available()
-            img = self.screenSimulation.font15.render(f'V: {ammo_vaporizer} F:{0} ', True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
-            #img = self.screenSimulation.font20.render(f'Pos:{col},{row}', True, BLUE)
-            #self.screenSimulation.screen.blit(img, _.get_position()+(0,40))
-        
-        index = 0 # index is used to track current kamikaze in the simulation list
-        for _ in self.kamikazes:
-            # checks if drones colided with eachother
-
-            # saves leader position
-            _.set_leader_position(pos_leader[-1])
-            ## collision avoindance is not implemented yet
-            _.align_swarm(self.kamikazes,index)
-            _.collision_avoidance(self.kamikazes,list_obst,index) 
-            #_.collision_avoidance_leader(pos_leader)
-            _.update()
-            _.draw(self.screenSimulation.screen) 
-            # getting if drone exploded 
-            explode_status = _.get_explode_state()
-            if explode_status: # Exploded
-                self.explosions.append(Explosion_kamikaze( _.location, self.screenSimulation.screen ))
+                # writes drone ammo available
+                ammo_vaporizer = _.vaporizer_gun.get_ammo_available()
+                ammo_freezing = _.vaporizer_gun.get_ammo_available()
+                img = self.screenSimulation.font15.render(f'V: {ammo_vaporizer} F:{ammo_freezing} ', True, LIGHT_BLUE)
+                self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+                #img = self.screenSimulation.font20.render(f'Pos:{col},{row}', True, BLUE)
+                #self.screenSimulation.screen.blit(img, _.get_position()+(0,40))
             
-            # index to keep track of  drone in the list
-            index += 1
-            # writes drone id
-            img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
-            # writes drone current behavior
-            img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+            index = 0 # index is used to track current kamikaze in the simulation list
+            for _ in self.kamikazes:
+                # checks if drones colided with eachother
+
+                # saves leader position
+                _.set_leader_position(pos_leader[-1])
+                ## collision avoindance is not implemented yet
+                _.align_swarm(self.kamikazes,index)
+                _.collision_avoidance(self.kamikazes,list_obst,index) 
+                #_.collision_avoidance_leader(pos_leader)
+                _.update()
+                _.draw(self.screenSimulation.screen) 
+                # getting if drone exploded 
+                explode_status = _.get_explode_state()
+                if explode_status: # Exploded
+                    self.explosions.append(Explosion_kamikaze( _.location, self.screenSimulation.screen ))
+                
+                # index to keep track of  drone in the list
+                index += 1
+                # writes drone id
+                img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
+                self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
+                # writes drone current behavior
+                img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
+                self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
 
 
-            if _.get_explode_state() == True: # delete kamikaze after explotion
-                self.kamikazes.pop(index-1)
+                if _.get_explode_state() == True: # delete kamikaze after explotion
+                    self.kamikazes.pop(index-1)
 
-        if len(self.kamikazes) < NUM_KAMIKAZES: # Keeps contants number of kamikazes
-            self.create_kamikaze()
+            if len(self.kamikazes) < NUM_KAMIKAZES: # Keeps contants number of kamikazes
+                self.create_kamikaze()
 
-        # update explosions
-        for index, _ in enumerate(self.explosions):
-            _.draw() # Updates explosion on screen
-            if _.delete_explosion_status(): # check if it is time to delete
-                self.explosions.pop(index)
+            # update explosions
+            for index, _ in enumerate(self.explosions):
+                _.draw() # Updates explosion on screen
+                if _.delete_explosion_status(): # check if it is time to delete
+                    self.explosions.pop(index)
 
     def add_new_kamikaze(self):
         self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) )
         drone = Kamikaze(0, random.uniform(0,SCREEN_HEIGHT), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
         self.kamikazes.append(drone)
+
+    def update_background(self):
+        # Background
+        background_image = self.screenSimulation.background_image
+        self.screenSimulation.screen.blit(background_image, [0, 0])
 
     def get_number_running_simultations(self):
         return len(self.swarm)
