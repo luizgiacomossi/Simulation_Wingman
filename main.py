@@ -34,10 +34,12 @@ avoid_list =[]
 
 run = True
 accelerated_factor = 1
+time_running = 0
 
 
 while run:
     # Draws at every dt
+    time_running += SAMPLE_TIME*accelerated_factor
     screenSimulation.clock.tick(FREQUENCY)
 
     # Pygame Events 
@@ -91,10 +93,15 @@ while run:
     screenSimulation.screen.blit(img, (20, 60))
     img = screenSimulation.font24.render(f'#KamikazesDestroyed: {simulation.get_kamikazes_destroyed()}', True, LIGHT_BLUE)
     screenSimulation.screen.blit(img, (20, 80))
+    img = screenSimulation.font24.render(f'Time: {time_running:0.2f}', True, LIGHT_BLUE)
+    screenSimulation.screen.blit(img, (20, 100))
+
 
     # Reset simulation if finnished
     if simulation.get_number_running_simultations() < 1:
         simulation = Simulation(screenSimulation)
         simulation.create_swarm_uav(NUM_DRONES)
+        pygame.time.wait(2000)
+        time_running = 0
 
     pygame.display.flip() 
