@@ -14,8 +14,6 @@ screenSimulation = ScreenSimulation()
 # load backgound
 background_image = pygame.image.load("models/texture/camouflage.png").convert()
 background_image = pygame.transform.scale(background_image,(SCREEN_WIDTH,SCREEN_HEIGHT))
-# defines initial target
-target = vec2(random.uniform(0,SCREEN_WIDTH/2), random.uniform(0,SCREEN_HEIGHT/2))
 
 # Generates obstacles
 list_obst = []
@@ -56,40 +54,26 @@ while run:
             if pygame.mouse.get_pressed()[0] == True:
                 # moves leading drone to point clicked
                 target_leading = vec2(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1])
-                leadingdrone.set_target(target_leading)
-                list_pos = leadingdrone.set_formation()
-                #set target for all loyal wingman
-                simulation.goto_formation(list_pos) 
-               
+                simulation.set_target_leader(target_leading)
+
             # right button - New KAMIKAZE
             if pygame.mouse.get_pressed()[2] == True:
                 simulation.add_new_kamikaze()              
         
         if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:  
             accelerated_factor += 1
-            print(accelerated_factor)
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:   
-            accelerated_factor -= 1
-            print(accelerated_factor)
+            if accelerated_factor > 0 :
+                accelerated_factor -= 1
 
     simulation.update_background()
     # Draws obstacles:
 
-    #updates and draws leading drone
-    pygame.draw.circle(screenSimulation.screen,(200, 250, 200), leadingdrone.get_position() , radius=DISTANCE_LEADER, width = 3)
-
     # updates and draws all simulations  
-
     simulation.run_simulation(avoid_list,list_obst, accelerated_factor)
 
-    #set target for all loyal wingman
-    list_pos = leadingdrone.set_formation(num_drones= simulation.get_number_running_simultations())
-    simulation.goto_formation(list_pos) 
-    
-    leadingdrone.update()
-    leadingdrone.draw(screenSimulation)
-
+    # draw obstacles 
     for _ in list_obst:
         pygame.draw.circle(screenSimulation.screen,(200, 250, 200), _ , radius=RADIUS_OBSTACLES, width = 2)
         pygame.draw.circle(screenSimulation.screen,(200, 250, 200), _ , radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width = 2)
@@ -99,5 +83,8 @@ while run:
     # Writes the App name in screen
     img = screenSimulation.font24.render('Loyal Wingman Simulation', True, LIGHT_BLUE)
     screenSimulation.screen.blit(img, (20, 20))
+        # Writes the App name in screen
+    img = screenSimulation.font20.render(f'Accelerated Factor: {accelerated_factor}', True, LIGHT_BLUE)
+    screenSimulation.screen.blit(img, (20, 60))
 
     pygame.display.flip() 

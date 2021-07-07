@@ -10,11 +10,13 @@ RESOLUTION = 100 # Of grid
 NUM_OBSTACLES = 0
 RADIUS_OBSTACLES = 40
 DISTANCE_LEADER = 100
-NUM_KAMIKAZES = 5
+NUM_KAMIKAZES = 2
+FREEZING_FACTOR = 1/3
+
 # Sample Time Parameters
 FREQUENCY = 60.0  # simulation frequency
 SAMPLE_TIME = 1.0 / FREQUENCY  # simulation sample time
-FREEZING_FACTOR = 1/3
+
 # Behavior Parameters
 FORWARD_SPEED = 2  # default linear speed when going forward
 ANGULAR_SPEED = 1.5# default angular speed

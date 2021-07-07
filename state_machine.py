@@ -481,6 +481,8 @@ class RandomWalkState(State):
         if (self.target - agent.location).length() < 10 and self.time_executing > 10:
             self.finished = True
 
+## --------------Kamikaze Behaviors----------------------
+
 class AttackKamikazeState(State):
     """
         Drone will seek target  
