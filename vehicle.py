@@ -855,12 +855,9 @@ class LoyalWingman(Vehicle):
                 closest = k.location
                 self.index_closest = index 
         
-        
         self.closest_kamikaze = closest
         self.distance_closest_kamikaze = closest_distance
         
-
-
         # draws vaporizing gun shot
         if closest_distance < 100:
             pg.draw.line(self.window, (100, 0, 0), self.location, self.closest_kamikaze , 1)

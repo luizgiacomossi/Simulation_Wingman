@@ -519,8 +519,8 @@ class AttackKamikazeState(State):
         agent.seek(self.target)
 
         self.time_executing += SAMPLE_TIME
-        #            exploded                           or         time to resample drone to attack
-        if (self.target - agent.location).length() < 10 or self.time_executing > 0.3:
+        #            exploded                or         time to resample drone to attack
+        if (self.target - agent.location).length() < 10 or self.time_executing > .3:
             self.finished = True
 
 class WaitState(State):

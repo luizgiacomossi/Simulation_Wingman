@@ -30,8 +30,6 @@ simulation.create_swarm_uav(NUM_DRONES)
 
 # Creates Leading Drone 
 avoid_list =[]
-leadingdrone = LeadingDrone(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, FiniteStateMachine( SeekState() ), screenSimulation.screen)
-avoid_list.append(leadingdrone.location)
 
 run = True
 accelerated_factor = 1
@@ -68,7 +66,6 @@ while run:
                 accelerated_factor -= 1
 
     simulation.update_background()
-    # Draws obstacles:
 
     # updates and draws all simulations  
     simulation.run_simulation(avoid_list,list_obst, accelerated_factor)
@@ -85,6 +82,14 @@ while run:
     screenSimulation.screen.blit(img, (20, 20))
         # Writes the App name in screen
     img = screenSimulation.font20.render(f'Accelerated Factor: {accelerated_factor}', True, LIGHT_BLUE)
-    screenSimulation.screen.blit(img, (20, 60))
+    screenSimulation.screen.blit(img, (20, 40))
+
+    # Reset simulation if finnished
+    if simulation.get_number_running_simultations() < 1:
+        simulation = Simulation(screenSimulation)
+        simulation.create_swarm_uav(NUM_DRONES)
+
+
+
 
     pygame.display.flip() 

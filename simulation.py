@@ -103,15 +103,15 @@ class Simulation(object):
 
     def run_simulation(self, pos_leader ,list_obst, time_step = 1):
         
-        index = 0 # index is used to track current drone in the simulation list
         # updates simulation
         for i in range(time_step): # accelerated factor 
 
             #--- leading drone
             self.leadingdrone.update()
             pos_leader = [self.leadingdrone.location]
+
             #--- Loyal Wingman
-            for _ in self.swarm:
+            for index, _ in enumerate(self.swarm):
                 # checks if drones colided with eachother
                 ## collision avoindance is not implemented yet
                 _.align_swarm(self.swarm,index)
@@ -128,8 +128,7 @@ class Simulation(object):
                         _.update_attack_status()
 
             #--- Kamikazes
-            index = 0 # index is used to track current kamikaze in the simulation list
-            for _ in self.kamikazes:
+            for index, _ in enumerate(self.kamikazes):
                 # checks if drones colided with eachother
 
                 # saves leader position
@@ -174,8 +173,19 @@ class Simulation(object):
 
 
         #-------- draw animations
-        self.leadingdrone.draw(self.screenSimulation.screen)
         pygame.draw.circle(self.screenSimulation.screen,(200, 250, 200), self.leadingdrone.get_position() , radius=DISTANCE_LEADER, width = 3)
+        self.leadingdrone.draw(self.screenSimulation.screen)
+        
+        for index, _ in enumerate(self.kamikazes):
+            _.draw(self.screenSimulation.screen) 
+            index += 1
+                            # writes drone id
+            img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
+            self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
+                # writes drone current behavior
+            img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
+            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+
 
         for index, _ in enumerate(self.swarm):
             _.draw(self.screenSimulation.screen)
@@ -200,16 +210,6 @@ class Simulation(object):
                 #img = self.screenSimulation.font20.render(f'Pos:{col},{row}', True, BLUE)
                 #self.screenSimulation.screen.blit(img, _.get_position()+(0,40))
 
-        for index, _ in enumerate(self.kamikazes):
-            _.draw(self.screenSimulation.screen) 
-            index += 1
-                            # writes drone id
-            img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
-                # writes drone current behavior
-            img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
-
     def add_new_kamikaze(self):
         self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) )
         drone = Kamikaze(0, random.uniform(0,SCREEN_HEIGHT), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
@@ -221,7 +221,9 @@ class Simulation(object):
         self.screenSimulation.screen.blit(background_image, [0, 0])
 
     def set_target_leader(self, target):
+        # define new target to leader
         self.leadingdrone.set_target(target)
+        # updates loyalwingman positions in formation 
         list_pos = self.leadingdrone.set_formation()
         self.goto_formation(list_pos) 
 

@@ -14,6 +14,7 @@ class LoyalWingmanBehaviorTree(BehaviorTree):
         #Construção Sequence Esquerdo
         sequenceLeft = SequenceNode("SequenciaEsquerda") # Instancia Nó Sequence lado esquerdo
         raiz.add_child(sequenceLeft) # add Nó a Raiz da arvore
+        sequenceLeft.add_child(BlockThreatNode())
         sequenceLeft.add_child(GoToFormationNode())  # Adiciona Nó de Ação a componente SequenceEsquerdo: Move Forward
         sequenceLeft.add_child(DefendLeaderNode()) # Adiciona Nó de Ação a componente SequenceEsquerdo: Move In Spiral
         
@@ -24,6 +25,35 @@ class LoyalWingmanBehaviorTree(BehaviorTree):
         # sequenceRight.add_child(RotateNode()) # Adiciona Nó de Ação a componente SequenceDireito: Rotate
         
 ## Metodos a implementar : enter() e execute() das classes a seguir
+
+class BlockThreatNode(LeafNode):
+    '''
+        Is threat in Danger Range?
+    '''
+    def __init__(self):
+        super().__init__("BlockThreat")
+        # Todo: add initialization code
+        self.time_executing : float # Variavel para contagem de tempo de execução 
+
+    def enter(self, agent):
+        # Todo: add enter logic
+        # define velocidade linear para voltar
+        self.time_executing = 0 # Reinicia tempo de execução 
+
+    def execute(self, agent):
+        # Todo: add execution logic
+        # contagem de tempo executando estado
+        self.time_executing += SAMPLE_TIME
+        if agent.kamikazes:
+            agent.check_distance_kamikazes()
+
+            if agent.distance_closest_kamikaze < 200:
+                agent.set_target(agent.closest_kamikaze)
+                #return ExecutionStatus(2) # Go Back em Execucao
+
+        
+        return ExecutionStatus(0) # Go Back em Execucao
+
 class GoToFormationNode(LeafNode):
     def __init__(self):
         super().__init__("GoToFormation")
@@ -38,7 +68,6 @@ class GoToFormationNode(LeafNode):
             self.target
         except:
             self.target = agent.get_target()
-
 
     def execute(self, agent):
         # Todo: add execution logic
