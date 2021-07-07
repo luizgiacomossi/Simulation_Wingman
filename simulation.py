@@ -48,6 +48,9 @@ class Simulation(object):
         self.leadingdrone = []
         self.create_leading_drone()
 
+        # Counter
+        self.counter_kamikazes_destroyed = 0
+
     def create_swarm_uav(self, num_swarm):
         # Create N simultaneous Drones
         for d in range(0, num_swarm):
@@ -159,6 +162,10 @@ class Simulation(object):
                     self.kamikazes.pop(index-1)
 
             if len(self.kamikazes) < NUM_KAMIKAZES: # Keeps contant number of kamikazes
+                # counts loyal destroyed
+                self.counter_kamikazes_destroyed += 1
+
+                # creates new kamikaze
                 self.create_kamikaze()
 
             # updates positions in formation
@@ -234,6 +241,9 @@ class Simulation(object):
 
     def get_number_running_simultations(self):
         return len(self.swarm)
+
+    def get_kamikazes_destroyed(self):
+        return self.counter_kamikazes_destroyed
 
     def reset(self):
         pass

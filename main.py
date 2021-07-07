@@ -86,6 +86,11 @@ while run:
         # Writes the App name in screen
     img = screenSimulation.font20.render(f'Accelerated Factor: {accelerated_factor}', True, LIGHT_BLUE)
     screenSimulation.screen.blit(img, (20, 40))
+    #   Writes # Loyal in  screen
+    img = screenSimulation.font24.render(f'#loyal wingman: {simulation.get_number_running_simultations()}', True, LIGHT_BLUE)
+    screenSimulation.screen.blit(img, (20, 60))
+    img = screenSimulation.font24.render(f'#KamikazesDestroyed: {simulation.get_kamikazes_destroyed()}', True, LIGHT_BLUE)
+    screenSimulation.screen.blit(img, (20, 80))
 
     # Reset simulation if finnished
     if simulation.get_number_running_simultations() < 1:
