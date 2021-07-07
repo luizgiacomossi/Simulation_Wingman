@@ -20,7 +20,8 @@ class ScreenSimulation(object):
         self.font24 = pygame.font.SysFont(None, 24)
         self.size = SCREEN_WIDTH, SCREEN_HEIGHT 
         self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode(self.size)
+        self.screen = pygame.display.set_mode(self.size,pygame.RESIZABLE)
+
                 #
         # load backgound
         self.background_image = pygame.image.load("models/texture/camouflage.png").convert()
@@ -216,9 +217,13 @@ class Simulation(object):
         self.kamikazes.append(drone)
 
     def update_background(self):
+        info = pygame.display.Info() # You have to call this before pygame.display.set_mode()
+        screen_width,screen_height = info.current_w,info.current_h
         # Background
         background_image = self.screenSimulation.background_image
+        background_image = pygame.transform.scale(background_image,(screen_width,screen_height))
         self.screenSimulation.screen.blit(background_image, [0, 0])
+
 
     def set_target_leader(self, target):
         # define new target to leader

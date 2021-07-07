@@ -3,14 +3,14 @@ SCREEN_WIDTH = 1900
 SCREEN_HEIGHT = 900
 PIX2M = 0.01  # factor to convert from pixels to meters
 M2PIX = 100.0  # factor to convert from meters to pixels
-NUM_DRONES = 7# Number of simultaneous drones
+NUM_DRONES = 10# Number of simultaneous drones
 SIZE_DRONE = 18
 SIZE_TRACK = 100
 RESOLUTION = 100 # Of grid
 NUM_OBSTACLES = 0
 RADIUS_OBSTACLES = 40
 DISTANCE_LEADER = 100
-NUM_KAMIKAZES = 2
+NUM_KAMIKAZES = 4
 FREEZING_FACTOR = 1/3
 
 # Sample Time Parameters

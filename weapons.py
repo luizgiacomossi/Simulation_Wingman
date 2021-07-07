@@ -7,7 +7,8 @@ class Weapon(object):
         self.rate_of_fire = rate_of_fire
         self.range_of_fire = range_of_fire
         self.kamikazes = swarm_kamikazes
-    
+        self.available = True
+
     def fire(self):
         print('atirei')
 

@@ -1,4 +1,4 @@
-import sys, pygame
+import sys, pygame, os
 from constants import *
 import random 
 import copy
@@ -8,6 +8,7 @@ from simulation import Simulation, ScreenSimulation
 from vehicle import LeadingDrone, LoyalWingman, Kamikaze
 from state_machine import FiniteStateMachine, SeekState, RandomWalkState
 
+os.environ['SDL_VIDEO_CENTERED'] = '1' 
 vec2 = pygame.math.Vector2
 ##=========================
 screenSimulation = ScreenSimulation()
@@ -33,6 +34,8 @@ avoid_list =[]
 
 run = True
 accelerated_factor = 1
+
+
 while run:
     # Draws at every dt
     screenSimulation.clock.tick(FREQUENCY)
@@ -88,8 +91,5 @@ while run:
     if simulation.get_number_running_simultations() < 1:
         simulation = Simulation(screenSimulation)
         simulation.create_swarm_uav(NUM_DRONES)
-
-
-
 
     pygame.display.flip() 

@@ -14,7 +14,7 @@ class LoyalWingmanBehaviorTree(BehaviorTree):
         #Construção Sequence Esquerdo
         sequenceLeft = SequenceNode("SequenciaEsquerda") # Instancia Nó Sequence lado esquerdo
         raiz.add_child(sequenceLeft) # add Nó a Raiz da arvore
-        sequenceLeft.add_child(BlockThreatNode())
+        sequenceLeft.add_child(ChaseThreatNode())
         sequenceLeft.add_child(GoToFormationNode())  # Adiciona Nó de Ação a componente SequenceEsquerdo: Move Forward
         sequenceLeft.add_child(DefendLeaderNode()) # Adiciona Nó de Ação a componente SequenceEsquerdo: Move In Spiral
         
@@ -26,12 +26,12 @@ class LoyalWingmanBehaviorTree(BehaviorTree):
         
 ## Metodos a implementar : enter() e execute() das classes a seguir
 
-class BlockThreatNode(LeafNode):
+class ChaseThreatNode(LeafNode):
     '''
         Is threat in Danger Range?
     '''
     def __init__(self):
-        super().__init__("BlockThreat")
+        super().__init__("ChaseThreatNode")
         # Todo: add initialization code
         self.time_executing : float # Variavel para contagem de tempo de execução 
 
@@ -47,7 +47,8 @@ class BlockThreatNode(LeafNode):
         if agent.kamikazes:
             agent.check_distance_kamikazes()
 
-            if agent.distance_closest_kamikaze < 200:
+            # se kamikaze esta proximo(400) e arma disponivel ele ira perseguir
+            if agent.distance_closest_kamikaze < 400 and  agent.vaporizer_gun.available == True :
                 agent.set_target(agent.closest_kamikaze)
                 #return ExecutionStatus(2) # Go Back em Execucao
 
@@ -109,9 +110,13 @@ class DefendLeaderNode(LeafNode):
         self.time_cooldown_vaporizer += SAMPLE_TIME
         self.time_cooldown_freezing += SAMPLE_TIME
 
+        if self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
+            agent.vaporizer_gun.available = True
+
         if agent.distance_closest_kamikaze < 100 and self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
             self.time_cooldown_vaporizer  = 0
             agent.fire_vaporizer(agent.closest_kamikaze)
+            agent.vaporizer_gun.available = False
 
         if agent.distance_closest_kamikaze < 300 and self.time_cooldown_freezing > COOLDOWN_FREEZING:
             self.time_cooldown_freezing  = 0
