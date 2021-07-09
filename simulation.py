@@ -7,9 +7,37 @@ from behavior_tree import *
 from decision_making import *
 from animation import Explosion_kamikaze
 from utils import generate_coordenates_kamikaze
+import matplotlib.pyplot as plt
 
 vec2 = pygame.math.Vector2
 ##=========================
+
+class Rate_Simulation(object):
+    def __init__(self):
+        super().__init__()
+        self.history_enemies_destroyed = []
+        self.iterations = 0
+        self.time = []
+
+    def print(self):
+        pass
+
+    def plot_graphs(self):
+        # x = iteration y = enemies destroyed
+        plt.close()
+        plt.plot([y for y in range(0,self.iterations)], self.history_enemies_destroyed)
+        plt.ylabel('iteration vs enemies destroyed')
+        plt.show()
+
+        plt.plot([y for y in range(0,self.iterations)], self.time )
+        plt.ylabel('iteration vs time')
+        plt.show()
+
+    def save_iteration(self, enemies_destroyed, time_elapsed ):
+        self.history_enemies_destroyed.append(enemies_destroyed)
+        self.iterations += 1
+        self.time.append(time_elapsed)
+
 
 class ScreenSimulation(object):
 
@@ -46,12 +74,14 @@ class Simulation(object):
         self.kamikazes = []
         self.explosions = []
         self.leadingdrone = []
-        self.create_leading_drone()
+        #self.create_leading_drone()
 
         # Counter
         self.counter_kamikazes_destroyed = 0
 
+
     def create_swarm_uav(self, num_swarm):
+        self.create_leading_drone()
         # Create N simultaneous Drones
         for d in range(0, num_swarm):
             #self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
@@ -64,7 +94,7 @@ class Simulation(object):
         for d in range(0, NUM_KAMIKAZES): # creating kamikaze swarm
             self.behaviors.append( FiniteStateMachine( WaitState() ) ) # Inicial state
             #Instantiate kamikazes 
-            drone = Kamikaze( random.uniform(0,50), random.uniform(0,50), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
+            drone = Kamikaze( random.uniform(0,50), random.uniform(0,50), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm, leader= self.leadingdrone)
             self.kamikazes.append(drone)
 
     def add_new_uav(self):
@@ -85,7 +115,7 @@ class Simulation(object):
         self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) ) # Inicial state
         #Instantiate kamikazes 
         position = generate_coordenates_kamikaze()
-        drone = Kamikaze( position[0], position[1], self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
+        drone = Kamikaze( position[0], position[1], self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm, leader= self.leadingdrone)
         self.kamikazes.append(drone)  
 
     def create_leading_drone(self):
@@ -230,7 +260,6 @@ class Simulation(object):
         background_image = self.screenSimulation.background_image
         background_image = pygame.transform.scale(background_image,(screen_width,screen_height))
         self.screenSimulation.screen.blit(background_image, [0, 0])
-
 
     def set_target_leader(self, target):
         # define new target to leader

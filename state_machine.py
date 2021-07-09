@@ -514,7 +514,8 @@ class AttackKamikazeState(State):
             self.target
         except:
             agent.define_target()
-            self.target = agent.get_closest_target()
+            #self.target = agent.get_closest_target()
+            self.target = agent.get_leader_position()
 
         agent.seek(self.target)
 

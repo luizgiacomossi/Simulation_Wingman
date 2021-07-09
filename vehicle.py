@@ -825,6 +825,10 @@ class LeadingDrone(Vehicle):
 
         return list_positions
 
+    def destroyed(self):
+        self.destroyed = True
+
+
 class LoyalWingman(Vehicle):
     def __init__(self, x, y, behavior, window):
         super().__init__(x, y, behavior, window)
@@ -945,7 +949,7 @@ class Kamikaze(Vehicle):
     '''
         The kamikaze drones are using behavior tree to operate
     '''
-    def __init__(self, x, y, behavior, window, LoyalWingmen = []):
+    def __init__(self, x, y, behavior, window, LoyalWingmen = [], leader = []):
         super().__init__(x, y, behavior, window)
 
         # Variables to draw drone using Sprites
@@ -956,6 +960,8 @@ class Kamikaze(Vehicle):
         self.closest_loyal = self.get_position()
         self.explode = False
         self.timer_explotion = 0
+        self.leader_loyal = leader
+        self.leader_position = leader.location
 
         #timer for slowdown after freezing gun
         self.freezing_timer = TIME_FROZEN
@@ -1018,15 +1024,16 @@ class Kamikaze(Vehicle):
                     self.explode = True # Self destruction command
                 
                 index_loyal += 1
-        else: # no more loyalwingman left
-            if self.leader_position: # leader is the last
-                closest_loyal = self.leader_position
-                distance_to_leader = self.location.distance_to(self.leader_position)
-                if distance_to_leader < SIZE_DRONE*2: 
-                    self.explode = True #
+        #else: # no more loyalwingman left
+        if self.leader_position: # leader is the last
+            closest_loyal = self.leader_position
+            distance_to_leader = self.location.distance_to(self.leader_position)
+            if distance_to_leader < SIZE_DRONE*2: 
+                self.explode_leader()
+                self.explode = True #
 
-            else:# no more drones left
-                closest_loyal = self.get_position()
+        else:# no more drones left
+            closest_loyal = self.get_position()
 
 
         self.closest_loyal = closest_loyal
@@ -1039,6 +1046,9 @@ class Kamikaze(Vehicle):
            
     def explode_loyalwingman(self, index):
         self.loyalwingmen.pop(index)
+    
+    def explode_leader(self):
+        self.leader_loyal.destroyed()
 
     def get_explode_state(self):
         '''
@@ -1074,6 +1084,9 @@ class Kamikaze(Vehicle):
         #self.applyForce(wind)
         # Draws current target as a point 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+
+    def get_leader_position(self):
+        return self.leader_loyal.location
 
     def __del__(self):
         #print('Kamikaze exploded')

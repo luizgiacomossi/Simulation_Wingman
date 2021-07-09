@@ -1,4 +1,5 @@
 from constants import *
+from random import uniform
 
 class Weapon(object):
     def __init__(self, cooldown, num_cartridges , rate_of_fire, range_of_fire, swarm_kamikazes):
@@ -30,7 +31,8 @@ class Vaporizer(Weapon):
         # check distance
         #print(f' Atirei no kamikaze me {kamikaze_position}')
         try:
-            if self.num_cartridges > 0:
+            prob = uniform(0,1)  # probability of hitting
+            if self.num_cartridges > 0 and ( 0 < prob < PROB_VAPORIZER):
                 self.kamikazes.pop(index_kamikaze)
                 self.num_cartridges -= 1
                 return True
@@ -49,7 +51,8 @@ class Freezing(Weapon):
         # check distance
         #print(f' Atirei no kamikaze me {kamikaze_position}')
         try:
-            if self.num_cartridges > 0:
+            prob = uniform(0,1)  # probability of hitting
+            if self.num_cartridges > 0 and ( 0 < prob < PROB_FREEZING ):
                 self.kamikazes[index_kamikaze].slow_down() 
                 self.num_cartridges -= 1
                 return True

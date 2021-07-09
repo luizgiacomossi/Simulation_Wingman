@@ -4,7 +4,7 @@ import random
 import copy
 from utils import FlowField
 from obstacle import Obstacles
-from simulation import Simulation, ScreenSimulation
+from simulation import Simulation, ScreenSimulation, Rate_Simulation
 from vehicle import LeadingDrone, LoyalWingman, Kamikaze
 from state_machine import FiniteStateMachine, SeekState, RandomWalkState
 
@@ -28,6 +28,7 @@ list_obst = obst.get_coordenates()
 
 simulation = Simulation(screenSimulation)
 simulation.create_swarm_uav(NUM_DRONES)
+history = Rate_Simulation()
 
 # Creates Leading Drone 
 avoid_list =[]
@@ -63,12 +64,16 @@ while run:
             if pygame.mouse.get_pressed()[2] == True:
                 simulation.add_new_kamikaze()              
         
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_p:  
+            # plot history
+            history.plot_graphs()
+
         if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:  
-            accelerated_factor += 1
+            accelerated_factor += 10
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:   
             if accelerated_factor > 0 :
-                accelerated_factor -= 1
+                accelerated_factor -= 10
 
     simulation.update_background()
 
@@ -98,10 +103,16 @@ while run:
 
 
     # Reset simulation if finnished
-    if simulation.get_number_running_simultations() < 1:
+    if simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True:
+        # save data
+        enemies_destroyed = simulation.get_kamikazes_destroyed()
+        history.save_iteration(enemies_destroyed,time_running)
+
+        # generates new iteration
         simulation = Simulation(screenSimulation)
         simulation.create_swarm_uav(NUM_DRONES)
         pygame.time.wait(2000)
         time_running = 0
 
     pygame.display.flip() 
+
