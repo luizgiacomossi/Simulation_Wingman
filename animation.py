@@ -31,8 +31,6 @@ class Explosion_kamikaze(object):
     def delete_explosion_status(self):
         return self.delete_explosion
 
-    
-    
 class Aircraft(pg.sprite.Sprite):
     """
         Represents a simple visual animated drone 
@@ -185,3 +183,11 @@ class Explosion(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         # positions center of rect in acual drone position
         self.rect.midbottom = position.x,position.y+20
+
+class ProtectedArea(object):
+    def __init__(self, size = 300, coordenates = vec(300,300) ):
+        super().__init__()
+
+    def draw(self):
+        pass
+

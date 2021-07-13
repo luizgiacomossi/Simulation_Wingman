@@ -112,7 +112,12 @@ class Simulation(object):
         self.swarm.append(drone)
 
     def create_kamikaze(self):
-        self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) ) # Inicial state
+        prob = uniform(0,1) # 50% will attack leader and 50% attack leader
+        if prob < 0.5:
+            self.behaviors.append( FiniteStateMachine( AttackLeaderState() ) ) # Inicial state
+        else:
+            self.behaviors.append( FiniteStateMachine( AttackLoyalWingmanState() ) ) # Inicial state
+                
         #Instantiate kamikazes 
         position = generate_coordenates_kamikaze()
         drone = Kamikaze( position[0], position[1], self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm, leader= self.leadingdrone)

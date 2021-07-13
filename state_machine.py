@@ -1,5 +1,5 @@
 import random
-from random import choices
+from random import choices, uniform
 from math import pi, atan2
 from constants import *
 import numpy as np
@@ -524,6 +524,88 @@ class AttackKamikazeState(State):
         if (self.target - agent.location).length() < 10 or self.time_executing > .3:
             self.finished = True
 
+class AttackLeaderState(State):
+    """
+        Drone will seek target  
+    """
+    def __init__(self):
+        # Todo: add initialization code
+        self.state_name = 'AttackLeaderState'
+        self.time_executing = 0 #Variavel para contagem do tempo de execução 
+        #print('AttackKamikazeState')
+        self.finished = False
+        #self.target = vec2(random.uniform(0,SCREEN_WIDTH),random.uniform(0,SCREEN_HEIGHT))
+
+    def check_transition(self, agent, state_machine):
+        # Todo: add logic to check and execute state transition
+        
+        # New target from mouse click
+        #if agent.get_target():
+            #self.target = agent.get_target()
+            #agent.set_target(None)
+            #self.sequence = 0 # reinicia movimento
+
+        # chegou ao waypoint
+        if self.finished == True:
+            state_machine.change_state(AttackLeaderState())  
+             
+    def execute(self, agent):
+        # logic to move drone to target
+        try:
+            self.target
+        except:
+            agent.define_target()
+            #self.target = agent.get_closest_target()
+            self.target = agent.get_leader_position()
+
+        agent.seek(self.target)
+
+        self.time_executing += SAMPLE_TIME
+        #            exploded                or         time to resample drone to attack
+        if (self.target - agent.location).length() < 10 or self.time_executing > .3:
+            self.finished = True
+
+class AttackLoyalWingmanState(State):
+    """
+        Drone will seek target  
+    """
+    def __init__(self):
+        # Todo: add initialization code
+        self.state_name = 'AttackLoyalWingmanState'
+        self.time_executing = 0 #Variavel para contagem do tempo de execução 
+        #print('AttackKamikazeState')
+        self.finished = False
+        #self.target = vec2(random.uniform(0,SCREEN_WIDTH),random.uniform(0,SCREEN_HEIGHT))
+
+    def check_transition(self, agent, state_machine):
+        # Todo: add logic to check and execute state transition
+        
+        # New target from mouse click
+        #if agent.get_target():
+            #self.target = agent.get_target()
+            #agent.set_target(None)
+            #self.sequence = 0 # reinicia movimento
+
+        # chegou ao waypoint
+        if self.finished == True:
+            state_machine.change_state(AttackLoyalWingmanState())  
+             
+    def execute(self, agent):
+        # logic to move drone to target
+        try:
+            self.target
+        except:
+            agent.define_target()
+            self.target = agent.get_closest_target()
+            #self.target = agent.get_leader_position()
+
+        agent.seek(self.target)
+
+        self.time_executing += SAMPLE_TIME
+        #            exploded                or         time to resample drone to attack
+        if (self.target - agent.location).length() < 10 or self.time_executing > .3:
+            self.finished = True
+
 class WaitState(State):
     """
         Drone will seek target  
@@ -547,7 +629,11 @@ class WaitState(State):
 
         # chegou ao waypoint
         if self.finished == True:
-            state_machine.change_state(AttackKamikazeState())  
+            prob = uniform(0,1)
+            if prob < 0.5:
+                state_machine.change_state(AttackLeaderState())  
+            else:
+                state_machine.change_state(AttackLoyalWingmanState())  
              
     def execute(self, agent):
         # logic to move drone to target

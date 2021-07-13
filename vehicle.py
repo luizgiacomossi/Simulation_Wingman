@@ -839,6 +839,7 @@ class LoyalWingman(Vehicle):
         self.closest_kamikaze = vec2(inf,inf)
         self.distance_closest_kamikaze = inf
         self.attack_status = ( vec2(0,0) , False ) # position attacked and sucessfull or not
+        self.kamikaze_to_attack = None
 
     def receive_list_kamikazes(self, kamikazes):
         self.kamikazes = kamikazes
@@ -858,7 +859,8 @@ class LoyalWingman(Vehicle):
                 closest_distance = distance
                 closest = k.location
                 self.index_closest = index 
-        
+                self.kamikaze_to_attack = k
+                
         self.closest_kamikaze = closest
         self.distance_closest_kamikaze = closest_distance
         

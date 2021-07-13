@@ -44,11 +44,13 @@ class ChaseThreatNode(LeafNode):
         # Todo: add execution logic
         # contagem de tempo executando estado
         self.time_executing += SAMPLE_TIME
+
         if agent.kamikazes:
             agent.check_distance_kamikazes()
+            kamikaze = agent.kamikaze_to_attack 
 
             # se kamikaze esta proximo(400) e arma disponivel ele ira perseguir
-            if agent.distance_closest_kamikaze < 400 and  agent.vaporizer_gun.available == True :
+            if agent.distance_closest_kamikaze < 400 and (agent.vaporizer_gun.available == True or agent.freezing_gun.available == True):
                 agent.set_target(agent.closest_kamikaze)
                 #return ExecutionStatus(2) # Go Back em Execucao
 
@@ -110,17 +112,24 @@ class DefendLeaderNode(LeafNode):
         self.time_cooldown_vaporizer += SAMPLE_TIME
         self.time_cooldown_freezing += SAMPLE_TIME
 
+        # cheking if weapons are availiable 
         if self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
             agent.vaporizer_gun.available = True
+        
+        if self.time_cooldown_freezing > COOLDOWN_FREEZING:
+            agent.freezing_gun.available = True
 
+        # check condition to attack
         if agent.distance_closest_kamikaze < 100 and self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
             self.time_cooldown_vaporizer  = 0
             agent.fire_vaporizer(agent.closest_kamikaze)
             agent.vaporizer_gun.available = False
 
-        if agent.distance_closest_kamikaze < 300 and self.time_cooldown_freezing > COOLDOWN_FREEZING:
+        kamikaze = agent.kamikaze_to_attack 
+        if agent.distance_closest_kamikaze < 300 and self.time_cooldown_freezing > COOLDOWN_FREEZING and kamikaze.freezing == False:
             self.time_cooldown_freezing  = 0
             agent.fire_freezing(agent.closest_kamikaze)
+            agent.freezing_gun.available = False
 
 
         # retorno Status
@@ -128,8 +137,6 @@ class DefendLeaderNode(LeafNode):
             #return ExecutionStatus(0) # Sucesso, Move Forward pelo tempo definido
             #return ExecutionStatus(2) # Em execuçao
         return ExecutionStatus(0) # 2 Todavia em Execucao 
-
-
 
 
 class MoveInSpiralNode(LeafNode):
