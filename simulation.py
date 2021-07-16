@@ -1,4 +1,5 @@
 import pygame
+import sys, pygame, os
 from constants import *
 from vehicle import Vehicle, VehiclePF, LoyalWingman, Kamikaze, LeadingDrone
 from state_machine import *
@@ -8,9 +9,51 @@ from decision_making import *
 from animation import Explosion_kamikaze
 from utils import generate_coordenates_kamikaze
 import matplotlib.pyplot as plt
+import statistics
 
 vec2 = pygame.math.Vector2
 ##=========================
+class ProcessorUserInput:
+    def __init__(self, simulation, history):
+        super().__init__()
+        self.history = history
+        self.simulation = simulation
+
+    def read(self):
+        # Pygame Events 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: sys.exit()
+            
+            # Key 'd' pressed
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_d:
+                for _ in self.simulation.swarm:
+                    _.set_debug()
+
+            # Mouse Clicked -> new taget or new Drone 
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # left button - New Target
+                if pygame.mouse.get_pressed()[0] == True:
+                    # moves leading drone to point clicked
+                    target_leading = vec2(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1])
+                    self.simulation.set_target_leader(target_leading)
+
+                # right button - New KAMIKAZE
+                if pygame.mouse.get_pressed()[2] == True:
+                    self.simulation.add_new_kamikaze()              
+            
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_p:  
+                # plot history
+                self.history.plot_graphs()
+                self.history.print()
+
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:  
+                self.simulation.accelerated_factor += 5
+
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:   
+                if self.simulation.accelerated_factor > 0 :
+                   self.simulation.accelerated_factor -= 5
+
+
 
 class Rate_Simulation(object):
     def __init__(self):
@@ -18,9 +61,14 @@ class Rate_Simulation(object):
         self.history_enemies_destroyed = []
         self.iterations = 0
         self.time = []
+        self.counter_loyalwingman_survived = []
 
     def print(self):
-        pass
+        print('=========================================')
+        print(f'Média de kamikazes destruidos : {statistics.mean(self.history_enemies_destroyed)}')
+        print(f'Média de Tempo de sobrevivencia  : {statistics.mean(self.time)}')
+        print(f'Média de loyalwingman que restaram : {statistics.mean(self.counter_loyalwingman_survived)}')
+        print('=========================================')
 
     def plot_graphs(self):
         # x = iteration y = enemies destroyed
@@ -33,11 +81,12 @@ class Rate_Simulation(object):
         plt.ylabel('iteration vs time')
         plt.show()
 
-    def save_iteration(self, enemies_destroyed, time_elapsed ):
+    def save_iteration(self, enemies_destroyed, time_elapsed, loyal_wingman_survived = 0 ):
         self.history_enemies_destroyed.append(enemies_destroyed)
+        #self.history_enemies_destroyed  = np.append(self.history_enemies_destroyed,enemies_destroyed)
         self.iterations += 1
         self.time.append(time_elapsed)
-
+        self.counter_loyalwingman_survived.append(loyal_wingman_survived)
 
 class ScreenSimulation(object):
 
@@ -50,10 +99,27 @@ class ScreenSimulation(object):
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode(self.size,pygame.RESIZABLE)
 
-                #
         # load backgound
         self.background_image = pygame.image.load("models/texture/camouflage.png").convert()
         self.background_image = pygame.transform.scale(self.background_image,(SCREEN_WIDTH,SCREEN_HEIGHT))
+
+    def WriteLegendOnCanvas(self, simulation, accelerated_factor , time_running, history):
+
+        # Writes the App name in screen
+        img = self.font24.render('Loyal Wingman Simulation', True, LIGHT_BLUE)
+        self.screen.blit(img, (20, 20))
+        # Writes the App name in screen
+        img = self.font20.render(f'Accelerated Factor: {accelerated_factor}', True, LIGHT_BLUE)
+        self.screen.blit(img, (20, 40))
+        #   Writes # Loyal in  screen
+        img = self.font24.render(f'#loyal wingman: {simulation.get_number_running_simultations()}', True, LIGHT_BLUE)
+        self.screen.blit(img, (20, 60))
+        img = self.font24.render(f'#KamikazesDestroyed: {simulation.get_kamikazes_destroyed()}', True, LIGHT_BLUE)
+        self.screen.blit(img, (20, 80))
+        img = self.font24.render(f'Time: {time_running:0.2f}', True, LIGHT_BLUE)
+        self.screen.blit(img, (20, 100))
+        img = self.font24.render(f'Iteration: {history.iterations+1}', True, LIGHT_BLUE)
+        self.screen.blit(img, (20, 120))
 
 class kamikaze_control(object):
     def __init__(self, num_kamikazes, screen):
@@ -65,7 +131,7 @@ class Simulation(object):
     
     def __init__(self, screenSimulation):
         self.screenSimulation = screenSimulation
-
+        self.accelerated_factor = 1
         # state machines for each vehicle
         self.behaviors =[] 
 
@@ -78,7 +144,6 @@ class Simulation(object):
 
         # Counter
         self.counter_kamikazes_destroyed = 0
-
 
     def create_swarm_uav(self, num_swarm):
         self.create_leading_drone()
@@ -140,10 +205,10 @@ class Simulation(object):
             _.set_target(targets[i])
             i += 1
 
-    def run_simulation(self, pos_leader ,list_obst, time_step = 1):
+    def run_simulation(self, pos_leader ,list_obst, accelerated_factor = 1):
         
         # updates simulation
-        for i in range(time_step): # accelerated factor 
+        for i in range(accelerated_factor): # accelerated factor 
 
             #--- leading drone
             self.leadingdrone.update()
@@ -228,7 +293,6 @@ class Simulation(object):
                 # writes drone current behavior
             img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
             self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
-
 
         for index, _ in enumerate(self.swarm):
             _.draw(self.screenSimulation.screen)

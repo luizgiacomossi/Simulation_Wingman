@@ -828,7 +828,6 @@ class LeadingDrone(Vehicle):
     def destroyed(self):
         self.destroyed = True
 
-
 class LoyalWingman(Vehicle):
     def __init__(self, x, y, behavior, window):
         super().__init__(x, y, behavior, window)
@@ -860,7 +859,7 @@ class LoyalWingman(Vehicle):
                 closest = k.location
                 self.index_closest = index 
                 self.kamikaze_to_attack = k
-                
+
         self.closest_kamikaze = closest
         self.distance_closest_kamikaze = closest_distance
         
@@ -1050,7 +1049,10 @@ class Kamikaze(Vehicle):
         self.loyalwingmen.pop(index)
     
     def explode_leader(self):
-        self.leader_loyal.destroyed()
+        try:
+            self.leader_loyal.destroyed()
+        except:
+            print('Leader Already destroyed')
 
     def get_explode_state(self):
         '''

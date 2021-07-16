@@ -162,8 +162,6 @@ def generate_coordenates_kamikaze():
 
     return position
 
-
-
 class FlowField():
     def __init__(self, resolution):
 
