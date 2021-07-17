@@ -829,7 +829,7 @@ class LeadingDrone(Vehicle):
         self.destroyed = True
 
 class LoyalWingman(Vehicle):
-    def __init__(self, x, y, behavior, window):
+    def __init__(self, x, y, behavior, window, distance_chase = 400):
         super().__init__(x, y, behavior, window)
         self.error = vec2(0,0)
         self.kamikazes = None
@@ -839,6 +839,9 @@ class LoyalWingman(Vehicle):
         self.distance_closest_kamikaze = inf
         self.attack_status = ( vec2(0,0) , False ) # position attacked and sucessfull or not
         self.kamikaze_to_attack = None
+
+        # param for chase a threat 
+        self.distance_chase = distance_chase
 
     def receive_list_kamikazes(self, kamikazes):
         self.kamikazes = kamikazes
@@ -944,7 +947,8 @@ class LoyalWingman(Vehicle):
 
    # Deleting (Calling destructor)
     def __del__(self):
-        print('Loyalwingman destroyed')
+        #print('Loyalwingman destroyed')
+        pass
 
 class Kamikaze(Vehicle):
     '''

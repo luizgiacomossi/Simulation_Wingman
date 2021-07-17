@@ -50,7 +50,8 @@ class ChaseThreatNode(LeafNode):
             kamikaze = agent.kamikaze_to_attack 
 
             # se kamikaze esta proximo(400) e arma disponivel ele ira perseguir
-            if agent.distance_closest_kamikaze < 400 and (agent.vaporizer_gun.available == True or agent.freezing_gun.available == True):
+            distance_chase = agent.distance_chase 
+            if agent.distance_closest_kamikaze < distance_chase and (agent.vaporizer_gun.available == True or agent.freezing_gun.available == True):
                 agent.set_target(agent.closest_kamikaze)
                 #return ExecutionStatus(2) # Go Back em Execucao
 
@@ -137,6 +138,12 @@ class DefendLeaderNode(LeafNode):
             #return ExecutionStatus(0) # Sucesso, Move Forward pelo tempo definido
             #return ExecutionStatus(2) # Em execuçao
         return ExecutionStatus(0) # 2 Todavia em Execucao 
+
+
+
+
+
+
 
 
 class MoveInSpiralNode(LeafNode):

@@ -9,7 +9,53 @@ from vehicle import LeadingDrone, LoyalWingman, Kamikaze
 from state_machine import FiniteStateMachine, SeekState, RandomWalkState
 os.environ['SDL_VIDEO_CENTERED'] = '1' 
 vec2 = pygame.math.Vector2
+from dataclasses import dataclass
+from particle_swarm_optimization import *
+##========================= PSO ===================================================
+def convert_particle_position_to_params(position):
+    """
+    Converts a particle position into controller params.
+    :param position: particle position.
+    :type position: numpy array.
+    :return: controller params.
+    """
+    params = Parameters()
+    #params.num_loyalwingman = int(position[0])
+    #params.num_kamikazes = int(position[1])
+    params.distance_chase = position[0]
 
+    return params
+
+@dataclass
+class Parameters:
+    """
+    Represents an auxiliary class for storing parameters.
+    """
+    pass
+
+# Defining PSO hyperparameters
+hyperparams = Parameters()
+hyperparams.num_particles = 40
+hyperparams.inertia_weight = 0.7
+hyperparams.cognitive_parameter = 0.6
+hyperparams.social_parameter = 0.8
+# num_loyal, num_kamikazes, distance_chase
+lower_bound = np.array([10])
+upper_bound = np.array([1000])
+
+# Particle Swarm Optimization
+pso = ParticleSwarmOptimization(hyperparams, lower_bound, upper_bound)
+# Number of function evaluations will be 1000 times the number of particles,
+# i.e. PSO will be executed by 100 generations
+num_evaluations = 100 * hyperparams.num_particles
+# Initializing history
+position_history = []  # history of evaluated particle positions
+quality_history = []  # history of evaluated qualities
+
+# Getting the first parameters to evaluate
+position = pso.get_position_to_evaluate()
+simulation_params = convert_particle_position_to_params(position)
+running_PSO = True
 ##=================================================================================================
 screenSimulation = ScreenSimulation()
 
@@ -21,7 +67,14 @@ obst.generate_obstacles()
 #list_obst = obst.get_coordenates()
 
 simulation = Simulation(screenSimulation)
-simulation.create_swarm_uav(NUM_DRONES)
+# para testar o pso, depois retirar esse comentario !!!!!!
+if running_PSO:
+    simulation.create_swarm_uav(NUM_DRONES,
+                                NUM_KAMIKAZES,
+                                simulation_params.distance_chase)
+else:
+    simulation.create_swarm_uav(NUM_DRONES, NUM_KAMIKAZES)
+
 history = Rate_Simulation()
 
 # Creates Leading Drone 
@@ -56,19 +109,47 @@ while run:
     screenSimulation.WriteLegendOnCanvas(simulation, simulation.accelerated_factor, time_running, history)
 
     # Reset simulation if finnished
-    if simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True:
-        # save data
+    if simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True or len(simulation.kamikazes) == 0:
+        
         enemies_destroyed = simulation.get_kamikazes_destroyed()
-        history.save_iteration(enemies_destroyed,time_running, simulation.get_number_running_simultations())
+        # ====== PSO =======
+        quality = history.evaluate(enemies_destroyed, time_running, simulation.get_number_running_simultations(), simulation.num_loyalwingman )
+        # save data
+        history.save_iteration(enemies_destroyed,
+                                time_running, 
+                                simulation.get_number_running_simultations(),
+                                quality)
+
+                    # Prints the results of the current training iteration
+        print('iter: ' + str(history.iterations) + ', quality: ' + str(quality))
+        # Append this iteration to the optimization history
+        position_history.append(np.array(position))
+        quality_history.append(quality)
+        # Update the optimization algorithm
+        pso.notify_evaluation(quality)
+        position = pso.get_position_to_evaluate()
+        simulation_params = convert_particle_position_to_params(position)
+        # ==================
 
         # generates new iteration
         accelerated_factor = simulation.accelerated_factor
         simulation = Simulation(screenSimulation)
-        simulation.create_swarm_uav(NUM_DRONES)
-        pygame.time.wait(1000)
-        time_running = 0
+        if running_PSO:
+            simulation.create_swarm_uav(NUM_DRONES,
+                                        NUM_KAMIKAZES,
+                                        simulation_params.distance_chase)
+        else:
+            simulation.create_swarm_uav(NUM_DRONES, NUM_KAMIKAZES )
+
         simulation.accelerated_factor = accelerated_factor
         input_processor = ProcessorUserInput(simulation,history)
+
+        # reset timer
+        time_running = 0
+        #pygame.time.wait(1000)
+
+
+        
 
     pygame.display.flip() 
 

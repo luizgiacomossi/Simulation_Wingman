@@ -13,6 +13,7 @@ import statistics
 
 vec2 = pygame.math.Vector2
 ##=========================
+
 class ProcessorUserInput:
     def __init__(self, simulation, history):
         super().__init__()
@@ -53,7 +54,8 @@ class ProcessorUserInput:
                 if self.simulation.accelerated_factor > 0 :
                    self.simulation.accelerated_factor -= 5
 
-
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:   
+                   self.simulation.accelerated_factor = 1
 
 class Rate_Simulation(object):
     def __init__(self):
@@ -62,6 +64,7 @@ class Rate_Simulation(object):
         self.iterations = 0
         self.time = []
         self.counter_loyalwingman_survived = []
+        self.quality = []
 
     def print(self):
         print('=========================================')
@@ -81,12 +84,37 @@ class Rate_Simulation(object):
         plt.ylabel('iteration vs time')
         plt.show()
 
-    def save_iteration(self, enemies_destroyed, time_elapsed, loyal_wingman_survived = 0 ):
+        plt.plot([y for y in range(0,self.iterations)], self.quality )
+        plt.ylabel('iteration vs quality')
+        plt.show()
+
+    def save_iteration(self, enemies_destroyed, time_elapsed, loyal_wingman_survived , quality ):
         self.history_enemies_destroyed.append(enemies_destroyed)
         #self.history_enemies_destroyed  = np.append(self.history_enemies_destroyed,enemies_destroyed)
         self.iterations += 1
         self.time.append(time_elapsed)
         self.counter_loyalwingman_survived.append(loyal_wingman_survived)
+        self.quality.append(quality)
+
+    def evaluate(self, enemies_destroyed, time_elapsed, loyal_wingman_survived, num_loyalwingman ):
+        """
+        Evaluates the simulation based on the metrics.
+
+        :return: reward for the current situation.
+        :rtype: float.
+        """
+
+        # reward é baseada no calculo de:
+            # enemies_destroyed
+            # time_elapsed
+            # loyal_wingman_survived
+
+        reward =  enemies_destroyed**2  + 5 * time_elapsed - loyal_wingman_survived*1000  - num_loyalwingman*100
+ 
+        # medida de qualidade:
+            # medida de qualidade recompensa o robô por cumprir o caminho
+            # mais rapidamente, enquanto o penaliza por desviar da linha
+        return reward  #
 
 class ScreenSimulation(object):
 
@@ -120,6 +148,8 @@ class ScreenSimulation(object):
         self.screen.blit(img, (20, 100))
         img = self.font24.render(f'Iteration: {history.iterations+1}', True, LIGHT_BLUE)
         self.screen.blit(img, (20, 120))
+        img = self.font24.render(f'Iteration using: #loyal {simulation.num_loyalwingman} #kamikazes {simulation.num_kamikazes}', True, LIGHT_BLUE)
+        self.screen.blit(img, (20, 140))
 
 class kamikaze_control(object):
     def __init__(self, num_kamikazes, screen):
@@ -134,29 +164,38 @@ class Simulation(object):
         self.accelerated_factor = 1
         # state machines for each vehicle
         self.behaviors =[] 
-
         # Current simulations 
         self.swarm = []
         self.kamikazes = []
         self.explosions = []
         self.leadingdrone = []
         #self.create_leading_drone()
-
         # Counter
         self.counter_kamikazes_destroyed = 0
+        # 
+        self.num_kamikazes: int 
+        self.num_loyalwingman: int
 
-    def create_swarm_uav(self, num_swarm):
+    def create_swarm_uav(self, num_swarm, num_kamikazes, distance_chase = 400):
         self.create_leading_drone()
+        # save parameters
+        self.num_kamikazes = num_kamikazes 
+        self.num_loyalwingman = num_swarm 
+
         # Create N simultaneous Drones
         for d in range(0, num_swarm):
             #self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
             self.behaviors.append( LoyalWingmanBehaviorTree() ) 
             #Instantiate drone 
             #drone = LoyalWingman(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
-            drone = LoyalWingman(random.uniform(SCREEN_WIDTH - 300,SCREEN_WIDTH), random.uniform(0 ,30), self.behaviors[-1], self.screenSimulation.screen)
+            drone = LoyalWingman(random.uniform(SCREEN_WIDTH - 300,SCREEN_WIDTH),
+                                 random.uniform(0 ,30), self.behaviors[-1],
+                                 self.screenSimulation.screen,
+                                 distance_chase)
+
             self.swarm.append(drone)
 
-        for d in range(0, NUM_KAMIKAZES): # creating kamikaze swarm
+        for d in range(0, num_kamikazes): # creating kamikaze swarm
             self.behaviors.append( FiniteStateMachine( WaitState() ) ) # Inicial state
             #Instantiate kamikazes 
             drone = Kamikaze( random.uniform(0,50), random.uniform(0,50), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm, leader= self.leadingdrone)
@@ -261,7 +300,7 @@ class Simulation(object):
                 if _.get_explode_state() == True: # delete kamikaze after explotion
                     self.kamikazes.pop(index-1)
 
-            if len(self.kamikazes) < NUM_KAMIKAZES: # Keeps contant number of kamikazes
+            if len(self.kamikazes) < self.num_kamikazes: # Keeps contant number of kamikazes
                 # counts loyal destroyed
                 self.counter_kamikazes_destroyed += 1
 
