@@ -1,7 +1,7 @@
 import pygame as pg
 from utils import random_color, limit, constrain, bivariateFunction, derivativeBivariate, normalFunction
 from constants import *
-from animation import Aircraft, Kamikaze_drone
+from animation import Aircraft, Kamikaze_drone, ProtectedArea
 from math import cos, sin, atan2, pi, inf
 import random
 import copy 
@@ -172,7 +172,7 @@ class Vehicle(object):
         posToCenter = center - self.location 
         #ok
         if self.debug == True:
-            pg.draw.line(self.window,BLACK, self.location ,center,1)
+            pg.draw.line(self.window,BLACK, self.location , center,1)
 
         # se o veiculo se encontra mais longue q o raio de rotaçao
         if posToCenter.length() > r :
@@ -829,7 +829,7 @@ class LeadingDrone(Vehicle):
         self.destroyed = True
 
 class LoyalWingman(Vehicle):
-    def __init__(self, x, y, behavior, window, distance_chase = 400):
+    def __init__(self, x, y, behavior, window, protected_area, distance_chase = 400):
         super().__init__(x, y, behavior, window)
         self.error = vec2(0,0)
         self.kamikazes = None
@@ -839,6 +839,7 @@ class LoyalWingman(Vehicle):
         self.distance_closest_kamikaze = inf
         self.attack_status = ( vec2(0,0) , False ) # position attacked and sucessfull or not
         self.kamikaze_to_attack = None
+        self.protected_area = protected_area
 
         # param for chase a threat 
         self.distance_chase = distance_chase
@@ -954,7 +955,7 @@ class Kamikaze(Vehicle):
     '''
         The kamikaze drones are using behavior tree to operate
     '''
-    def __init__(self, x, y, behavior, window, LoyalWingmen = [], leader = []):
+    def __init__(self, x, y, behavior, window, LoyalWingmen = [], leader = [], protected_area = None):
         super().__init__(x, y, behavior, window)
 
         # Variables to draw drone using Sprites
@@ -967,6 +968,7 @@ class Kamikaze(Vehicle):
         self.timer_explotion = 0
         self.leader_loyal = leader
         self.leader_position = leader.location
+        self.protected_area = protected_area
 
         #timer for slowdown after freezing gun
         self.freezing_timer = TIME_FROZEN
@@ -1057,6 +1059,20 @@ class Kamikaze(Vehicle):
             self.leader_loyal.destroyed()
         except:
             print('Leader Already destroyed')
+
+    def check_protected_area(self):
+        # explode protected_area
+        distance_to_protected_area = self.location.distance_to(self.protected_area.coordenates)
+        if distance_to_protected_area <  self.protected_area.radius: 
+            self.explode_protected_area()
+
+
+    def explode_protected_area(self):
+        self.explode = True # Self destruction command
+        if self.protected_area.is_active():
+            self.protected_area.attacked()
+        else:
+            print('Area Already destroyed')
 
     def get_explode_state(self):
         '''

@@ -1,5 +1,6 @@
 from behavior_tree import *
 from constants import *
+from math import inf
 
 
 class LoyalWingmanBehaviorTree(BehaviorTree):
@@ -10,23 +11,22 @@ class LoyalWingmanBehaviorTree(BehaviorTree):
         super().__init__()
         # Todo: construct the tree here
         raiz = self.root = SelectorNode("root") # Raiz: Componente Selector
-
+    # OLD
         #Construção Sequence Esquerdo
         sequenceLeft = SequenceNode("SequenciaEsquerda") # Instancia Nó Sequence lado esquerdo
         raiz.add_child(sequenceLeft) # add Nó a Raiz da arvore
-        sequenceLeft.add_child(ChaseThreatNode())
+        sequenceLeft.add_child(DefendLeaderNode())
+        #sequenceLeft.add_child(DefendProtectedAreaNode())
         sequenceLeft.add_child(GoToFormationNode())  # Adiciona Nó de Ação a componente SequenceEsquerdo: Move Forward
-        sequenceLeft.add_child(DefendLeaderNode()) # Adiciona Nó de Ação a componente SequenceEsquerdo: Move In Spiral
-        
-        # #Construção  Sequence Direito
-        # sequenceRight = SequenceNode("SequenceDireita") # Instancia Nó Sequence lado Direito
-        # raiz.add_child(sequenceRight) # add Nó a Raiz da arvore 
-        # sequenceRight.add_child(GoBackNode()) # Adiciona Nó de Ação a componente SequenceDireito: Go Back
-        # sequenceRight.add_child(RotateNode()) # Adiciona Nó de Ação a componente SequenceDireito: Rotate
-        
-## Metodos a implementar : enter() e execute() das classes a seguir
+        sequenceLeft.add_child(AttackThreatNode()) # Adiciona Nó de Ação a componente SequenceEsquerdo: Move In Spiral
+    
 
-class ChaseThreatNode(LeafNode):
+## Metodos a implementar : enter() e execute() das classes a seguir
+    #SUCCESS = 0
+    #FAILURE = 1
+    #RUNNING = 2
+
+class DefendLeaderNode(LeafNode):
     '''
         Is threat in Danger Range?
     '''
@@ -46,15 +46,15 @@ class ChaseThreatNode(LeafNode):
         self.time_executing += SAMPLE_TIME
 
         if agent.kamikazes:
+        #========== Check closest drone to the leader to attack
             agent.check_distance_kamikazes()
             kamikaze = agent.kamikaze_to_attack 
 
             # se kamikaze esta proximo(400) e arma disponivel ele ira perseguir
             distance_chase = agent.distance_chase 
-            if agent.distance_closest_kamikaze < distance_chase and (agent.vaporizer_gun.available == True or agent.freezing_gun.available == True):
+            if agent.distance_closest_kamikaze < distance_chase and (agent.vaporizer_gun.available == True):
                 agent.set_target(agent.closest_kamikaze)
-                #return ExecutionStatus(2) # Go Back em Execucao
-
+         ##=============================================
         
         return ExecutionStatus(0) # Go Back em Execucao
 
@@ -95,9 +95,9 @@ class GoToFormationNode(LeafNode):
         
         return ExecutionStatus(0) # 2 Todavia em Execucao 
 
-class DefendLeaderNode(LeafNode):
+class AttackThreatNode(LeafNode):
     def __init__(self):
-        super().__init__("Defend Leader")
+        super().__init__("Attack Threat")
         # Todo: add initialization code
         # Contagem do tempo de execucao Move Forward
         self.time_cooldown_vaporizer = 0 
@@ -139,6 +139,44 @@ class DefendLeaderNode(LeafNode):
             #return ExecutionStatus(2) # Em execuçao
         return ExecutionStatus(0) # 2 Todavia em Execucao 
 
+class DefendProtectedAreaNode(LeafNode):
+    '''
+        Is threat in Danger Range?
+    '''
+    def __init__(self):
+        super().__init__("Defend Protected Area Behavior")
+        # Todo: add initialization code
+        self.time_executing : float # Variavel para contagem de tempo de execução 
+
+    def enter(self, agent):
+        # Todo: add enter logic
+        # define velocidade linear para voltar
+        self.time_executing = 0 # Reinicia tempo de execução 
+
+    def execute(self, agent):
+        # Todo: add execution logic
+        # contagem de tempo executando estado
+        self.time_executing += SAMPLE_TIME
+
+        if agent.kamikazes:
+            # check closest kamikaze to protected area
+            closest_protected_area = +inf
+            memory_closest = None
+            for kamikaze in agent.kamikazes:
+                distance_to_area = agent.protected_area.coordenates.distance_to(kamikaze.location)
+                if distance_to_area < closest_protected_area:
+                    closest_protected_area =distance_to_area
+                    memory_closest = kamikaze
+            #============================================
+            # se kamikaze esta proximo e arma disponivel ele ira perseguir
+            #distance_chase = agent.dist_chase_protected_area 
+            distance_chase = 300
+            if agent.distance_closest_kamikaze < distance_chase and (agent.vaporizer_gun.available == True):
+                agent.set_target(memory_closest.location)
+                #return ExecutionStatus(2) # Go Back em Execucao
+
+        
+        return ExecutionStatus(0) # Go Back em Execucao
 
 
 
@@ -146,6 +184,9 @@ class DefendLeaderNode(LeafNode):
 
 
 
+
+### =========== =========== =========== =========== =========== ===========
+# these behaviors are not used
 class MoveInSpiralNode(LeafNode):
     def __init__(self):
         super().__init__("MoveInSpiral")

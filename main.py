@@ -109,7 +109,7 @@ while run:
     screenSimulation.WriteLegendOnCanvas(simulation, simulation.accelerated_factor, time_running, history)
 
     # Reset simulation if finnished
-    if simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True or len(simulation.kamikazes) == 0:
+    if simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True or len(simulation.kamikazes) == 0 or simulation.protected_area.is_active() == False  : 
         
         enemies_destroyed = simulation.get_kamikazes_destroyed()
         # ====== PSO =======
@@ -139,7 +139,7 @@ while run:
                                         NUM_KAMIKAZES,
                                         simulation_params.distance_chase)
         else:
-            simulation.create_swarm_uav(NUM_DRONES, NUM_KAMIKAZES )
+            simulation.create_swarm_uav(NUM_DRONES, NUM_KAMIKAZES, 400 )
 
         simulation.accelerated_factor = accelerated_factor
         input_processor = ProcessorUserInput(simulation,history)

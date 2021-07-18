@@ -184,10 +184,89 @@ class Explosion(pg.sprite.Sprite):
         # positions center of rect in acual drone position
         self.rect.midbottom = position.x,position.y+20
 
+class Factory_Plant(pg.sprite.Sprite):
+    """
+        Represents a simple visual  plant 
+    """
+    def __init__(self):
+        pg.sprite.Sprite.__init__(self)
+        self.sprites = []
+
+        for i in range(1,2):
+            self.sprites.append(pg.image.load(f'models/building/plant.png').convert())
+            #self.sprites.append(pg.image.load(f'models/building/sprite0.png').convert())
+            self.sprites[i-1] =  pg.transform.rotozoom(self.sprites[i-1], 0, 0.7)
+
+        self.atual = 0
+        # inherited from the pygame sprite class it is the first element of the drone
+        self.image = self.sprites[self.atual]
+        # scales down drone sprites to (70,70)
+        #self.image = pg.transform.scale(self.image,(RADIUS_OBSTACLES,RADIUS_OBSTACLES))
+        # rect is inherited from Sprite
+        # defines the sprite's position on the screen
+        # take the image size
+        self.rect = self.image.get_rect()
+        
+        # pega o canto superior esquerdo, posição qualquer
+        self.rect.topleft = 100,100
+
+    def update(self, position, angle, size = SIZE_DRONE* PIX2M):
+        
+        # animation update speed is controle by this parameter
+        self.atual += .001
+        if self.atual >= len(self.sprites)-1:
+            self.atual = 0
+
+        self.image = self.sprites[round(self.atual)]
+    
+        # Rotates image -> angle should be in degrees
+        # rotozoom(Surface, angle, scale) -> Surface
+        #self.image = pg.transform.rotozoom(self.image, 0, .2)
+        self.rect = self.image.get_rect()
+        # positions center of rect in acual drone position
+        self.rect.center = position.x,position.y+20
+
 class ProtectedArea(object):
-    def __init__(self, size = 300, coordenates = vec(300,300) ):
+    def __init__(self, radius, coordenates, window):
         super().__init__()
+        self.coordenates = coordenates
+        self.radius = radius
+        self.window = window
+        self.plant = Factory_Plant()
+        self.all_sprites = pg.sprite.Group()
+        self.all_sprites.add(self.plant)
+        self.life = 100
+        self.active = True
+        self.font24 = pg.font.SysFont(None, 30)
+
+    def draw_legend(self):
+         # Writes the App name in screen
+        img = self.font24.render(f'Protected Area:{self.life}%', True, LIGHT_BLUE)
+        self.window.blit(img, (self.coordenates[0]-120, self.coordenates[1]+self.radius))
+        if self.active== False:
+            img = self.font24.render(f'Destroyed', True, (250,0,0))
+            self.window.blit(img, (self.coordenates[0]-100, self.coordenates[1]+self.radius+20))
 
     def draw(self):
-        pass
+        self.draw_legend()
+        pg.draw.circle(self.window, 
+                        (200, 100, 100), 
+                        self.coordenates, 
+                        self.radius, 
+                        10)
+        # usar sprite para desenhar drone
+        self.all_sprites.draw(self.window)
+        self.all_sprites.update(self.coordenates,0)
+
+    def attacked(self):
+        self.life -= 20
+        if self.life <= 0:
+            self.active = False
+
+    def is_active(self):
+        return self.active
+
+    
+
+
 

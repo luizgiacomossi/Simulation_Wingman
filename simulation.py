@@ -6,7 +6,7 @@ from state_machine import *
 import random
 from behavior_tree import *
 from decision_making import *
-from animation import Explosion_kamikaze
+from animation import Explosion_kamikaze, ProtectedArea
 from utils import generate_coordenates_kamikaze
 import matplotlib.pyplot as plt
 import statistics
@@ -67,12 +67,13 @@ class Rate_Simulation(object):
         self.quality = []
 
     def print(self):
-        print('=========================================')
-        print(f'Média de kamikazes destruidos : {statistics.mean(self.history_enemies_destroyed)}')
-        print(f'Média de Tempo de sobrevivencia  : {statistics.mean(self.time)}')
-        print(f'Média de loyalwingman que restaram : {statistics.mean(self.counter_loyalwingman_survived)}')
-        print('=========================================')
 
+        print('=========================================||Result||========================================')
+        print(f'Média de kamikazes destruidos : {statistics.mean(self.history_enemies_destroyed)} Std: {statistics.stdev(self.history_enemies_destroyed)} Var: {statistics.variance(self.history_enemies_destroyed)}')
+        print(f'Média de Tempo de sobrevivencia  : {statistics.mean(self.time)} Std: {statistics.stdev(self.time)} Var: {statistics.variance(self.time)}')
+        print(f'Média de loyalwingman que restaram : {statistics.mean(self.counter_loyalwingman_survived)} Std: {statistics.stdev(self.counter_loyalwingman_survived)} Var: {statistics.variance(self.counter_loyalwingman_survived)}')
+        print('===========================================================================================')
+ # 
     def plot_graphs(self):
         # x = iteration y = enemies destroyed
         plt.close()
@@ -125,7 +126,7 @@ class ScreenSimulation(object):
         self.font24 = pygame.font.SysFont(None, 24)
         self.size = SCREEN_WIDTH, SCREEN_HEIGHT 
         self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode(self.size,pygame.RESIZABLE)
+        self.screen = pygame.display.set_mode(self.size,pygame.RESIZABLE,  pygame.SRCALPHA)
 
         # load backgound
         self.background_image = pygame.image.load("models/texture/camouflage.png").convert()
@@ -169,6 +170,9 @@ class Simulation(object):
         self.kamikazes = []
         self.explosions = []
         self.leadingdrone = []
+        self.protected_area = ProtectedArea(radius=240,
+                                            coordenates=vec2(1800,170),
+                                            window= self.screenSimulation.screen)
         #self.create_leading_drone()
         # Counter
         self.counter_kamikazes_destroyed = 0
@@ -191,6 +195,7 @@ class Simulation(object):
             drone = LoyalWingman(random.uniform(SCREEN_WIDTH - 300,SCREEN_WIDTH),
                                  random.uniform(0 ,30), self.behaviors[-1],
                                  self.screenSimulation.screen,
+                                 self.protected_area,
                                  distance_chase)
 
             self.swarm.append(drone)
@@ -198,7 +203,14 @@ class Simulation(object):
         for d in range(0, num_kamikazes): # creating kamikaze swarm
             self.behaviors.append( FiniteStateMachine( WaitState() ) ) # Inicial state
             #Instantiate kamikazes 
-            drone = Kamikaze( random.uniform(0,50), random.uniform(0,50), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm, leader= self.leadingdrone)
+            drone = Kamikaze(random.uniform(0,50), 
+                            random.uniform(0,50), 
+                            self.behaviors[-1], 
+                            self.screenSimulation.screen, 
+                            LoyalWingmen= self.swarm, 
+                            leader= self.leadingdrone,
+                            protected_area = self.protected_area)
+                            
             self.kamikazes.append(drone)
 
     def add_new_uav(self):
@@ -217,14 +229,22 @@ class Simulation(object):
 
     def create_kamikaze(self):
         prob = uniform(0,1) # 50% will attack leader and 50% attack leader
-        if prob < 0.5:
+        if prob < 0.33:
             self.behaviors.append( FiniteStateMachine( AttackLeaderState() ) ) # Inicial state
-        else:
+        elif prob >= 0.33 and prob < 0.66:
             self.behaviors.append( FiniteStateMachine( AttackLoyalWingmanState() ) ) # Inicial state
-                
+        else:
+            self.behaviors.append( FiniteStateMachine( AttackProtectedAreaState() ) ) # Inicial state
+
         #Instantiate kamikazes 
         position = generate_coordenates_kamikaze()
-        drone = Kamikaze( position[0], position[1], self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm, leader= self.leadingdrone)
+        drone = Kamikaze(position[0], 
+                         position[1], 
+                         self.behaviors[-1], 
+                         self.screenSimulation.screen, 
+                         LoyalWingmen= self.swarm, 
+                         leader= self.leadingdrone,
+                         protected_area = self.protected_area)
         self.kamikazes.append(drone)  
 
     def create_leading_drone(self):
@@ -273,7 +293,6 @@ class Simulation(object):
             #--- Kamikazes
             for index, _ in enumerate(self.kamikazes):
                 # checks if drones colided with eachother
-
                 # saves leader position
                 _.set_leader_position(pos_leader[-1])
                 ## collision avoindance is not implemented yet
@@ -281,6 +300,8 @@ class Simulation(object):
                 _.collision_avoidance(self.kamikazes,list_obst,index) 
                 #_.collision_avoidance_leader(pos_leader)
                 _.update()
+                # check protected area
+                _.check_protected_area()
                 #_.draw(self.screenSimulation.screen) 
                 # getting if drone exploded 
                 explode_status = _.get_explode_state()
@@ -303,10 +324,8 @@ class Simulation(object):
             if len(self.kamikazes) < self.num_kamikazes: # Keeps contant number of kamikazes
                 # counts loyal destroyed
                 self.counter_kamikazes_destroyed += 1
-
                 # creates new kamikaze
                 self.create_kamikaze()
-
             # updates positions in formation
                 #set target for all loyal wingman
             list_pos = self.leadingdrone.set_formation(num_drones = self.get_number_running_simultations())
@@ -318,21 +337,13 @@ class Simulation(object):
                 if _.delete_explosion_status(): # check if it is time to delete
                     self.explosions.pop(index)
 
-
-        #-------- draw animations
+        #draw leading drone
         pygame.draw.circle(self.screenSimulation.screen,(200, 250, 200), self.leadingdrone.get_position() , radius=DISTANCE_LEADER, width = 3)
         self.leadingdrone.draw(self.screenSimulation.screen)
-        
-        for index, _ in enumerate(self.kamikazes):
-            _.draw(self.screenSimulation.screen) 
-            index += 1
-                            # writes drone id
-            img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
-                # writes drone current behavior
-            img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+        img = self.screenSimulation.font20.render(f'Leading Drone', True, LIGHT_BLUE)
+        self.screenSimulation.screen.blit(img, self.leadingdrone.get_position()+(0,20))
 
+        ## ------
         for index, _ in enumerate(self.swarm):
             _.draw(self.screenSimulation.screen)
                         # index to keep track of  drone in the list
@@ -356,6 +367,21 @@ class Simulation(object):
                 #img = self.screenSimulation.font20.render(f'Pos:{col},{row}', True, BLUE)
                 #self.screenSimulation.screen.blit(img, _.get_position()+(0,40))
 
+        #draw protected area
+        self.protected_area.draw()
+
+        for index, _ in enumerate(self.kamikazes):
+            _.draw(self.screenSimulation.screen) 
+            index += 1
+                            # writes drone id
+            img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
+            self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
+                # writes drone current behavior
+            img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
+            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+
+        #-------- end draw animations ---------
+
     def add_new_kamikaze(self):
         self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) )
         drone = Kamikaze(0, random.uniform(0,SCREEN_HEIGHT), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
@@ -368,6 +394,8 @@ class Simulation(object):
         background_image = self.screenSimulation.background_image
         background_image = pygame.transform.scale(background_image,(screen_width,screen_height))
         self.screenSimulation.screen.blit(background_image, [0, 0])
+        # Draw line to delimit were kamikazes are born
+        pygame.draw.line(self.screenSimulation.screen, (100,200,100), vec2(screen_width/3,0) , vec2(screen_width/3, screen_height), 10)
 
     def set_target_leader(self, target):
         # define new target to leader

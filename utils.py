@@ -145,20 +145,17 @@ def constrain3d(v3,w,h,alt):
 def generate_coordenates_kamikaze():
     alpha_random = random.uniform(0,1)
     
-    if alpha_random < 0.5:
-        if alpha_random < 0.25:
+
+    if alpha_random < 0.33:
             # x = 0 y = random
-            position = vec(0, random.uniform(0,SCREEN_HEIGHT))
-        else:
+        position = vec(0, random.uniform(0,SCREEN_HEIGHT))
+    elif alpha_random >= 0.33 and alpha_random < 0.66:
             # x = random y = 0
-            position = vec(random.uniform(0,SCREEN_WIDTH), 0)
-    else:
-        if alpha_random < 0.75:
+        position = vec(random.uniform(0,SCREEN_WIDTH/3), 0)
+    else: 
             # y = SCREEN_HEIGHT x = ramdom
-            position = vec(random.uniform(0,SCREEN_WIDTH), SCREEN_HEIGHT)
-        else:
-            # y = 0 x = SCREEN_WIDTH
-            position = vec(SCREEN_WIDTH, random.uniform(0,SCREEN_HEIGHT))
+        position = vec(random.uniform(0,SCREEN_WIDTH/3), SCREEN_HEIGHT)
+
 
     return position
 
