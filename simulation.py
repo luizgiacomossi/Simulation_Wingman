@@ -73,20 +73,27 @@ class Rate_Simulation(object):
         print(f'Média de Tempo de sobrevivencia  : {statistics.mean(self.time)} Std: {statistics.stdev(self.time)} Var: {statistics.variance(self.time)}')
         print(f'Média de loyalwingman que restaram : {statistics.mean(self.counter_loyalwingman_survived)} Std: {statistics.stdev(self.counter_loyalwingman_survived)} Var: {statistics.variance(self.counter_loyalwingman_survived)}')
         print('===========================================================================================')
+  
  # 
     def plot_graphs(self):
         # x = iteration y = enemies destroyed
+        # Plot the responses for different events and regions
+
         plt.close()
         plt.plot([y for y in range(0,self.iterations)], self.history_enemies_destroyed)
-        plt.ylabel('iteration vs enemies destroyed')
+        plt.ylabel('Iteration vs Enemies Destroyed')
         plt.show()
 
         plt.plot([y for y in range(0,self.iterations)], self.time )
-        plt.ylabel('iteration vs time')
+        plt.ylabel('Iteration vs Time')
         plt.show()
 
         plt.plot([y for y in range(0,self.iterations)], self.quality )
-        plt.ylabel('iteration vs quality')
+        plt.ylabel('Iteration vs Quality')
+        plt.show()
+
+        plt.plot([y for y in range(0,self.iterations)], self.counter_loyalwingman_survived )
+        plt.ylabel('# of loyalwingman survided')
         plt.show()
 
     def save_iteration(self, enemies_destroyed, time_elapsed, loyal_wingman_survived , quality ):
@@ -97,7 +104,7 @@ class Rate_Simulation(object):
         self.counter_loyalwingman_survived.append(loyal_wingman_survived)
         self.quality.append(quality)
 
-    def evaluate(self, enemies_destroyed, time_elapsed, loyal_wingman_survived, num_loyalwingman ):
+    def evaluate(self, enemies_destroyed, time_elapsed, loyal_wingman_survived ):
         """
         Evaluates the simulation based on the metrics.
 
@@ -110,7 +117,7 @@ class Rate_Simulation(object):
             # time_elapsed
             # loyal_wingman_survived
 
-        reward =  enemies_destroyed**2  + 5 * time_elapsed - loyal_wingman_survived*1000  - num_loyalwingman*100
+        reward =  enemies_destroyed**2  + 10 * time_elapsed - loyal_wingman_survived*1000  
  
         # medida de qualidade:
             # medida de qualidade recompensa o robô por cumprir o caminho
@@ -179,12 +186,24 @@ class Simulation(object):
         # 
         self.num_kamikazes: int 
         self.num_loyalwingman: int
+        self.distance_formation: float
+        self.distance_rings_formation: float
 
-    def create_swarm_uav(self, num_swarm, num_kamikazes, distance_chase = 400):
-        self.create_leading_drone()
+    def create_swarm_uav(self, num_swarm, num_kamikazes, 
+                        distance_chase = 400, 
+                        kp= 0.625, 
+                        kv= 4.5, 
+                        distance_formation = DISTANCE_LEADER, 
+                        distance_rings_formation = 1.2):
+
+        self.distance_rings_formation = distance_rings_formation
+        self.distance_formation = distance_formation
+        self.create_leading_drone(distance_formation= distance_formation)
+        
         # save parameters
         self.num_kamikazes = num_kamikazes 
         self.num_loyalwingman = num_swarm 
+
 
         # Create N simultaneous Drones
         for d in range(0, num_swarm):
@@ -196,7 +215,10 @@ class Simulation(object):
                                  random.uniform(0 ,30), self.behaviors[-1],
                                  self.screenSimulation.screen,
                                  self.protected_area,
-                                 distance_chase)
+                                 distance_chase,
+                                 #distance_chase[d],
+                                 kp,
+                                 kv)
 
             self.swarm.append(drone)
 
@@ -247,8 +269,13 @@ class Simulation(object):
                          protected_area = self.protected_area)
         self.kamikazes.append(drone)  
 
-    def create_leading_drone(self):
-        self.leadingdrone = LeadingDrone(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, FiniteStateMachine( SeekState() ), self.screenSimulation.screen)
+    def create_leading_drone(self, distance_formation):
+        self.leadingdrone = LeadingDrone(SCREEN_WIDTH/2, 
+                                        SCREEN_HEIGHT/2, 
+                                        FiniteStateMachine( SeekState() ), 
+                                        self.screenSimulation.screen,
+                                        distance_leader = distance_formation,
+                                        distance_rings_formation= self.distance_rings_formation)
 
     def set_same_target_all(self, target):
         for _ in self.swarm:
@@ -338,7 +365,7 @@ class Simulation(object):
                     self.explosions.pop(index)
 
         #draw leading drone
-        pygame.draw.circle(self.screenSimulation.screen,(200, 250, 200), self.leadingdrone.get_position() , radius=DISTANCE_LEADER, width = 3)
+        pygame.draw.circle(self.screenSimulation.screen,(200, 250, 200), self.leadingdrone.get_position() , radius= self.distance_formation , width = 3)
         self.leadingdrone.draw(self.screenSimulation.screen)
         img = self.screenSimulation.font20.render(f'Leading Drone', True, LIGHT_BLUE)
         self.screenSimulation.screen.blit(img, self.leadingdrone.get_position()+(0,20))
@@ -352,8 +379,8 @@ class Simulation(object):
             img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, LIGHT_BLUE)
             self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
                 # writes drone current behavior
-                #img = self.screenSimulation.font20.render(_.behavior.node_name, True, BLUE)
-                #self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+            #img = self.screenSimulation.font20.render(_.behavior.root.node_name, True, BLUE)
+            #self.screenSimulation.screen.blit(img, _.get_position()+(0,40))
                 # writes drone current position in column and row
             p = _.get_position()
             col =  int(p.x/RESOLUTION) + 1

@@ -23,6 +23,8 @@ def convert_particle_position_to_params(position):
     #params.num_loyalwingman = int(position[0])
     #params.num_kamikazes = int(position[1])
     params.distance_chase = position[0]
+    params.formation_distance = position[1]
+    params.distance_rings_formation = position[2]
 
     return params
 
@@ -39,9 +41,9 @@ hyperparams.num_particles = 40
 hyperparams.inertia_weight = 0.7
 hyperparams.cognitive_parameter = 0.6
 hyperparams.social_parameter = 0.8
-# num_loyal, num_kamikazes, distance_chase
-lower_bound = np.array([10])
-upper_bound = np.array([1000])
+# distance_chase,formation_distance
+lower_bound = np.array([10  ,  0 , 0])
+upper_bound = np.array([1000, 300, 4])
 
 # Particle Swarm Optimization
 pso = ParticleSwarmOptimization(hyperparams, lower_bound, upper_bound)
@@ -55,7 +57,7 @@ quality_history = []  # history of evaluated qualities
 # Getting the first parameters to evaluate
 position = pso.get_position_to_evaluate()
 simulation_params = convert_particle_position_to_params(position)
-running_PSO = True
+running_PSO = False
 ##=================================================================================================
 screenSimulation = ScreenSimulation()
 
@@ -71,9 +73,20 @@ simulation = Simulation(screenSimulation)
 if running_PSO:
     simulation.create_swarm_uav(NUM_DRONES,
                                 NUM_KAMIKAZES,
-                                simulation_params.distance_chase)
+                                simulation_params.distance_chase,
+                                #300.7,
+                                #kp=29.85,
+                                #kv=37.31,
+                                #distance_formation = DISTANCE_LEADER)
+                                #distance_formation = 69.02)
+                                distance_formation = simulation_params.formation_distance,
+                                distance_rings_formation = simulation_params.distance_rings_formation)
 else:
-    simulation.create_swarm_uav(NUM_DRONES, NUM_KAMIKAZES)
+    simulation.create_swarm_uav(NUM_DRONES, 
+                                NUM_KAMIKAZES, 
+                                distance_chase = 352,
+                                distance_formation = 62, 
+                                distance_rings_formation = 2.3)
 
 history = Rate_Simulation()
 
@@ -89,7 +102,9 @@ input_processor = ProcessorUserInput(simulation,history)
 
 while run:
     # Draws at every dt
-    time_running += SAMPLE_TIME*simulation.accelerated_factor
+    if simulation.accelerated_factor>0:
+        time_running += SAMPLE_TIME*simulation.accelerated_factor
+
     screenSimulation.clock.tick(FREQUENCY)
 
     # Process user input - Pygame Events 
@@ -113,7 +128,7 @@ while run:
         
         enemies_destroyed = simulation.get_kamikazes_destroyed()
         # ====== PSO =======
-        quality = history.evaluate(enemies_destroyed, time_running, simulation.get_number_running_simultations(), simulation.num_loyalwingman )
+        quality = history.evaluate(enemies_destroyed, time_running, simulation.get_number_running_simultations() )
         # save data
         history.save_iteration(enemies_destroyed,
                                 time_running, 
@@ -129,6 +144,7 @@ while run:
         pso.notify_evaluation(quality)
         position = pso.get_position_to_evaluate()
         simulation_params = convert_particle_position_to_params(position)
+        print(f'Params for iteration: {simulation_params.distance_chase} Distance from leader: {simulation_params.formation_distance}, distance_rings_formation: {simulation_params.distance_rings_formation}')
         # ==================
 
         # generates new iteration
@@ -137,9 +153,21 @@ while run:
         if running_PSO:
             simulation.create_swarm_uav(NUM_DRONES,
                                         NUM_KAMIKAZES,
-                                        simulation_params.distance_chase)
+                                        simulation_params.distance_chase,
+                                        #300.7,
+                                        #kp=29.85,
+                                        #kv=37.31,
+                                        #distance_formation = DISTANCE_LEADER)
+                                        #distance_formation = 69.02)
+                                        distance_formation = simulation_params.formation_distance,
+                                        distance_rings_formation = simulation_params.distance_rings_formation)
         else:
-            simulation.create_swarm_uav(NUM_DRONES, NUM_KAMIKAZES, 400 )
+            print('Running PSO OFF')
+            simulation.create_swarm_uav(NUM_DRONES, 
+                                        NUM_KAMIKAZES, 
+                                        distance_chase = 352,
+                                        distance_formation = 62, 
+                                        distance_rings_formation = 2.3)
 
         simulation.accelerated_factor = accelerated_factor
         input_processor = ProcessorUserInput(simulation,history)

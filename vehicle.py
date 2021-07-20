@@ -744,6 +744,11 @@ class VehiclePF(object):
         print('Drone Deleted')
 
 class LeadingDrone(Vehicle):
+    def __init__(self, x, y, behavior, window, distance_leader = DISTANCE_LEADER, distance_rings_formation = 1.2):
+
+        super().__init__(x, y, behavior, window)
+        self.distance_formation = distance_leader
+        self.distance_rings_formation = distance_rings_formation
 
     def arrive_new(self, target):
         """
@@ -797,13 +802,14 @@ class LeadingDrone(Vehicle):
         # Draws current target as a point 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
-    def set_formation(self, num_drones = NUM_DRONES, distance_leader = DISTANCE_LEADER):
+    def set_formation_old(self, num_drones = NUM_DRONES):
         '''
             This method returns the positions for the loyal wingman surrounding the leading drone
 
             input: number of drones in formation
             return: list of positions
         '''
+        distance_leader = self.distance_formation
         if num_drones > 1: # check if there is still loyalwingmen
             step_angle = 2 * pi / num_drones 
         else:
@@ -813,6 +819,7 @@ class LeadingDrone(Vehicle):
         #print(f'position leader:{pos}')
         ang = 0
         list_positions = []
+
         # calculates position of drone in formation
         for _ in range(num_drones):
             x = pos[0] + distance_leader*cos(ang)
@@ -825,11 +832,119 @@ class LeadingDrone(Vehicle):
 
         return list_positions
 
+    def set_formation_2rings(self, num_drones = NUM_DRONES):
+        '''
+            This method returns the positions for the loyal wingman surrounding the leading drone
+            using 2 rings
+
+            input: number of drones in formation
+            return: list of positions
+        '''
+        even = None 
+        if (num_drones % 2) == 0:  
+            even = True
+        else:  
+            even = False
+
+        distance_leader = self.distance_formation
+        if num_drones > 1: # check if there is still loyalwingmen
+            half_drones = int(num_drones/2) 
+            step_angle = 2 * pi / int(half_drones) 
+        else:
+            step_angle = 0
+            half_drones = 0
+
+        pos = self.get_position()
+        #print(f'position leader:{pos}')
+        ang = 0
+        list_positions = []
+        
+        # calculates position of drone in formation
+        for _ in range(half_drones):
+            x = pos[0] + distance_leader*cos(ang)
+            y = pos[1] + distance_leader*sin(ang)
+
+            ang += step_angle
+            
+            list_positions.append( vec2( x, y ) )
+
+        ang = +90 # defasagem entre rings
+        distance_rings = self.distance_rings_formation *distance_leader
+        pg.draw.circle(self.window,(200, 250, 200), pos, radius= distance_rings*self.distance_formation , width = 3)
+
+        if even == False:
+            half_drones+=1
+        for _ in range(half_drones):
+            x = pos[0] + distance_rings*cos(ang)
+            y = pos[1] + distance_rings*sin(ang)
+ 
+            ang += step_angle
+            
+            list_positions.append( vec2( x, y ) )
+
+        return list_positions
+
+    def set_formation(self, num_drones = NUM_DRONES):
+        '''
+            This method returns the positions for the loyal wingman surrounding the leading drone
+            using 2 rings
+
+            input: number of drones in formation
+            return: list of positions
+        '''
+        even = None 
+        if (num_drones % 2) == 0:  
+            even = True
+        else:  
+            even = False
+
+        distance_leader = self.distance_formation
+        if num_drones > 1: # check if there is still loyalwingmen
+            half_drones = int(num_drones/2) 
+            step_angle = 2 * pi / int(half_drones) # inner angle
+            step_angle2 = 2 * pi / (int(half_drones) - num_drones) # outter angle
+        else:
+            step_angle = 0
+            step_angle2 = 0 
+            half_drones = 0
+
+        pos = self.get_position()
+        #print(f'position leader:{pos}')
+        ang = 0
+        list_positions = []
+        ang2 = +pi/4# defasagem entre rings
+        distance_rings = self.distance_rings_formation *distance_leader
+        # calculates position of drone in formation
+        for _ in range(half_drones):
+            x = pos[0] + distance_leader*cos(ang)
+            y = pos[1] + distance_leader*sin(ang)
+
+            ang += step_angle
+            
+            list_positions.append( vec2( x, y ) )
+            # outter rings
+
+            x = pos[0] + distance_rings*cos(ang2)
+            y = pos[1] + distance_rings*sin(ang2)
+            ang2 += step_angle2
+            list_positions.append( vec2( x, y ) )
+
+        if even == False:
+                # for the last dorne if number is odd    
+            x = pos[0] + distance_rings*cos(ang2)
+            y = pos[1] + distance_rings*sin(ang2)
+            ang2 += step_angle2
+            list_positions.append( vec2( x, y ) )
+                
+        pg.draw.circle(self.window,(200, 250, 200), pos, radius= distance_rings , width = 3)
+
+        return list_positions
+
     def destroyed(self):
         self.destroyed = True
 
 class LoyalWingman(Vehicle):
-    def __init__(self, x, y, behavior, window, protected_area, distance_chase = 400):
+    def __init__(self, x, y, behavior, window, protected_area, distance_chase = 400, kp= 0.625, kv= 4.5):
         super().__init__(x, y, behavior, window)
         self.error = vec2(0,0)
         self.kamikazes = None
@@ -840,7 +955,8 @@ class LoyalWingman(Vehicle):
         self.attack_status = ( vec2(0,0) , False ) # position attacked and sucessfull or not
         self.kamikaze_to_attack = None
         self.protected_area = protected_area
-
+        self.kp = kp
+        self.kv = kv
         # param for chase a threat 
         self.distance_chase = distance_chase
 
@@ -883,6 +999,10 @@ class LoyalWingman(Vehicle):
         wn=15/60
         kv = 2*MASS*xi*wn
         kp = MASS*wn**2
+
+        kv = self.kv
+        kp = self.kp
+
         self.desired = kp * (target - self.location) - kv * self.velocity
 
         a_desired =  limit(self.desired, self.max_force)
@@ -913,8 +1033,9 @@ class LoyalWingman(Vehicle):
                 # This condition checks if drone collided with wall
                 # if collided, this avoids that the drone goes over the obstacle
                 if (d < AVOID_DISTANCE):
-                    self.applyForce(- self.velocity.normalize()*self.max_speed) 
-                    
+                    #self.applyForce(- self.velocity.normalize()*self.max_speed) 
+                    self.velocity *= -1
+
                 self.applyForce(-f_repulsion)
 
     def fire_vaporizer(self, kamikaze_position):
@@ -1065,7 +1186,6 @@ class Kamikaze(Vehicle):
         distance_to_protected_area = self.location.distance_to(self.protected_area.coordenates)
         if distance_to_protected_area <  self.protected_area.radius: 
             self.explode_protected_area()
-
 
     def explode_protected_area(self):
         self.explode = True # Self destruction command

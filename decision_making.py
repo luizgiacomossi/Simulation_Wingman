@@ -15,7 +15,7 @@ class LoyalWingmanBehaviorTree(BehaviorTree):
         #Construção Sequence Esquerdo
         sequenceLeft = SequenceNode("SequenciaEsquerda") # Instancia Nó Sequence lado esquerdo
         raiz.add_child(sequenceLeft) # add Nó a Raiz da arvore
-        sequenceLeft.add_child(DefendLeaderNode())
+        sequenceLeft.add_child(ChaseThreatNode())
         #sequenceLeft.add_child(DefendProtectedAreaNode())
         sequenceLeft.add_child(GoToFormationNode())  # Adiciona Nó de Ação a componente SequenceEsquerdo: Move Forward
         sequenceLeft.add_child(AttackThreatNode()) # Adiciona Nó de Ação a componente SequenceEsquerdo: Move In Spiral
@@ -26,7 +26,7 @@ class LoyalWingmanBehaviorTree(BehaviorTree):
     #FAILURE = 1
     #RUNNING = 2
 
-class DefendLeaderNode(LeafNode):
+class ChaseThreatNode(LeafNode):
     '''
         Is threat in Danger Range?
     '''
@@ -281,4 +281,3 @@ class RotateNode(LeafNode):
             return ExecutionStatus(0) # Rotaçao concluida com sucesso
         
         return ExecutionStatus(2) # Rotação em execucao 
-
