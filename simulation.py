@@ -48,11 +48,11 @@ class ProcessorUserInput:
                 self.history.print()
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:  
-                self.simulation.accelerated_factor += 5
+                self.simulation.accelerated_factor += 3
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:   
                 if self.simulation.accelerated_factor > 0 :
-                   self.simulation.accelerated_factor -= 5
+                   self.simulation.accelerated_factor -= 3
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r:   
                    self.simulation.accelerated_factor = 1
@@ -74,35 +74,41 @@ class Rate_Simulation(object):
         print(f'Média de loyalwingman que restaram : {statistics.mean(self.counter_loyalwingman_survived)} Std: {statistics.stdev(self.counter_loyalwingman_survived)} Var: {statistics.variance(self.counter_loyalwingman_survived)}')
         print('===========================================================================================')
   
- # 
     def plot_graphs(self):
         # x = iteration y = enemies destroyed
         # Plot the responses for different events and regions
-
+        plt.rc("text", usetex = True )
+        plt.rcParams.update({ 'font.family' : 'serif' })
+        plt.rcParams.update({ 'font.size' : 16})
+ 
         plt.close()
         plt.plot([y for y in range(0,self.iterations)], self.history_enemies_destroyed)
         plt.ylabel('Iteration vs Enemies Destroyed')
+        plt.grid()
         plt.show()
 
         plt.plot([y for y in range(0,self.iterations)], self.time )
         plt.ylabel('Iteration vs Time')
+        plt.grid()
         plt.show()
 
         plt.plot([y for y in range(0,self.iterations)], self.quality )
         plt.ylabel('Iteration vs Quality')
+        plt.grid()
         plt.show()
 
         plt.plot([y for y in range(0,self.iterations)], self.counter_loyalwingman_survived )
-        plt.ylabel('# of loyalwingman survided')
+        plt.ylabel('Number of loyalwingman survided')
+        plt.grid()
         plt.show()
 
     def save_iteration(self, enemies_destroyed, time_elapsed, loyal_wingman_survived , quality ):
-        self.history_enemies_destroyed.append(enemies_destroyed)
-        #self.history_enemies_destroyed  = np.append(self.history_enemies_destroyed,enemies_destroyed)
-        self.iterations += 1
+
+        self.history_enemies_destroyed.append(enemies_destroyed)    
         self.time.append(time_elapsed)
         self.counter_loyalwingman_survived.append(loyal_wingman_survived)
         self.quality.append(quality)
+        self.iterations += 1
 
     def evaluate(self, enemies_destroyed, time_elapsed, loyal_wingman_survived ):
         """

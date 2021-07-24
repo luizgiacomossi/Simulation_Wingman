@@ -802,7 +802,7 @@ class LeadingDrone(Vehicle):
         # Draws current target as a point 
         pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
-    def set_formation_old(self, num_drones = NUM_DRONES):
+    def set_formation(self, num_drones = NUM_DRONES):
         '''
             This method returns the positions for the loyal wingman surrounding the leading drone
 
@@ -884,7 +884,7 @@ class LeadingDrone(Vehicle):
 
         return list_positions
 
-    def set_formation(self, num_drones = NUM_DRONES):
+    def set_formation_2rings_new(self, num_drones = NUM_DRONES):
         '''
             This method returns the positions for the loyal wingman surrounding the leading drone
             using 2 rings
