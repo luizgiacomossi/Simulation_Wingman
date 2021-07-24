@@ -18,6 +18,19 @@ Dependencies:
 
 Execute: main.py
 
+In main:
+	running_PSO = False # for run simulation with desired parameters
+	if running_PSO = True # for run simulation with PSO optimization
+	# change params in the following function
+	
+	simulation.create_swarm_uav(NUM_DRONES, 
+                                NUM_KAMIKAZES, 
+                                distance_chase = 306.6,
+                                distance_formation = 100.1,
+                                #distance_formation = 62)
+                                # distance_rings_formation = 2.37)
+
+
 Files Description:
  
 	Main.py 	 - Main file - EXECUTE THIS FILE TO RUN SIMULATION
