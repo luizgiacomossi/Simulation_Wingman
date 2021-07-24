@@ -26,9 +26,7 @@ In main:
 	simulation.create_swarm_uav(NUM_DRONES, 
                                 NUM_KAMIKAZES, 
                                 distance_chase = 306.6,
-                                distance_formation = 100.1,
-                                #distance_formation = 62)
-                                # distance_rings_formation = 2.37)
+                                distance_formation = 100.1)
 
 
 Files Description:
