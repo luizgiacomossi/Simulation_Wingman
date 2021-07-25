@@ -41,6 +41,7 @@ Files Description:
 	behavior_tree.py - Behavior Tree framework
 	decision_making.py - Behavior Tree for the loyal wingman agents
 	particle_swarm_optimization.py - PSO implementation used to optimize simulation parameters
+	simulation.py	 - Simulation control and evaluation.
 	
 
 The folder Model is for the sprites used in the animation
