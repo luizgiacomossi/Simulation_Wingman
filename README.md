@@ -31,17 +31,18 @@ In main:
 
 Files Description:
  
-	Main.py 	 - Main file - EXECUTE THIS FILE TO RUN SIMULATION
-	utils.py 	 - useful functions
-	constants.py 	 - parameters used in the simulation
-	state_machine.py - state machine used to control behaviors
-	vehicle.py	 - UAV logic and basic behaviors
-	weapons.py	 - Weapons logic
-	obstacle.py  	 - Not Used
-	behavior_tree.py - Behavior Tree framework
-	decision_making.py - Behavior Tree for the loyal wingman agents
-	particle_swarm_optimization.py - PSO implementation used to optimize simulation parameters
-	simulation.py	 - Simulation control and evaluation.
+	Main.py 	 		- Main file - EXECUTE THIS FILE TO RUN SIMULATION
+	simulation.py			- Simulation controller and evaluation.
+	utils.py 	 		- useful functions
+	constants.py 	 		- Fixed parameters used in the simulation
+	state_machine.py 		- Kamikaze's decision making code (state machine used to control the kamikaze behaviors)
+	vehicle.py	 		- MAV logic and basic behaviors
+	obstacle.py  	 		- Used to generate obstacles in the scenario (this code is working but was not used.)
+	particle_swarm_optimization.py  - PSO implementation, used for params optimization
+	weapons.py	 		- Weapons (freezing gun and vaporizer gun) logic
+	decision_making.py 		- Loyal wingman decision-making logic.
+	behavior_tree.py		- framework for a behavior tree.
+	animation.py			- Animation (2D graphics) logic
+	/experimentos			- Folder with the result graphs of optimizations.
+	/Model 				- The sprites developed for the animations present.
 	
-
-The folder Model is for the sprites used in the animation
