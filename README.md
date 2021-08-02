@@ -28,6 +28,7 @@ In main:
                                 distance_chase = 306.6,
                                 distance_formation = 100.1)
 
+* Up and Down arrows to control the simulation acceleration 
 
 Files Description:
  
