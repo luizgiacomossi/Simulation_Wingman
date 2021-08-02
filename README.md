@@ -1,7 +1,8 @@
 # Loyal Wingman Simulation
 
-This project is an implementation of the loyal wingman concept
-Where there is a leading drone, controlled by the user, and loyal wingman drones protecting the leading drone from kamikaze attacks.
+This project is an implementation of the loyal wingman concept.
+
+There is a leading drone, controlled by the user, and anutonomous loyal wingman drones protecting the leading drone from kamikaze attacks.
 
 For the execution of the script it is necessary:
 
@@ -20,11 +21,17 @@ Execute: main.py
 
 Files Description:
  
-	Main.py 	 - Main file
-	utils.py 	 - useful functions
-	constants.py 	 - parameters used in the simulation
-	state_machine.py - state machine used to control behaviors
-	vehicle.py	 - MAV logic and basic behaviors
-	obstacle.py  	 - Used to generate obstacles in the scenario
-
-The folder Model is for the sprites used in the animation
+	Main.py 	 		- Main file
+	simulation.py			- Simulation controller and evaluation.
+	utils.py 	 		- useful functions
+	constants.py 	 		- Fixed parameters used in the simulation
+	state_machine.py 		- Kamikaze's decision making code (state machine used to control the kamikaze behaviors)
+	vehicle.py	 		- MAV logic and basic behaviors
+	obstacle.py  	 		- Used to generate obstacles in the scenario (this code is working but was not used.)
+	particle_swarm_optimization.py  - PSO implementation, used for params optimization
+	weapons.py	 		- Weapons (freezing gun and vaporizer gun) logic
+	decision_making.py 		- Loyal wingman decision-making logic.
+	behavior_tree.py		- framework for a behavior tree.
+	animation.py			- Animation (2D graphics) logic
+	/experimentos			- Folder with the result graphs of optimizations.
+	/Model 				- The sprites developed for the animations present.
