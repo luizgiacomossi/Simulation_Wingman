@@ -5,10 +5,10 @@ Where there is a leading drone, controlled by the user, and loyal wingman drones
 
 For the execution of the script it is necessary:
 
-- PYTHON
-- VSCode or any other code editor
+- PYTHON 3.8 or Newer version
+- Visual Studio Code (VSCode) or any other code editor
 
-Dependencies: 
+Python Dependencies: 
 
 - PYGAME -> https://www.pygame.org/wiki/GettingStarted
 	- pip install pygame
@@ -18,7 +18,7 @@ Dependencies:
  	- pip install matplotlib	
 
 
-	->To run the simulator, run the following script: main.py
+## To run the simulator: you only need to run the following script: -> main.py
 
 In main, change the following line to:
 
