@@ -18,7 +18,7 @@ Dependencies:
  	- pip install matplotlib	
 
 
-Execute: main.py
+	->To run the simulator, run the following script: main.py
 
 In main:
 	running_PSO = False # for run simulation with desired parameters
