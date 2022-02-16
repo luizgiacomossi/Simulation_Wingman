@@ -21,6 +21,7 @@ Dependencies:
 	->To run the simulator, run the following script: main.py
 
 In main:
+
 	if running_PSO = False # run simulation with offline parameters
 	
 	if running_PSO = True #  run simulation with PSO optimization
