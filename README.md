@@ -1,4 +1,4 @@
-#- Loyal Wingman 2D Simulation - 
+# Loyal Wingman 2D Simulation 
 
 This project is the first implementation of the loyal wingman concept using simulated UAVs. 
 
