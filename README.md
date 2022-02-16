@@ -1,7 +1,10 @@
-# Loyal Wingman Simulation
+#- Loyal Wingman 2D Simulation - 
 
-This project is an implementation of the loyal wingman concept using simulated UAVs
-Where there is a leading drone, controlled by the user, and loyal wingman drones protecting the leading drone from kamikaze attacks.
+This project is the first implementation of the loyal wingman concept using simulated UAVs. 
+
+The focus of this implementation is on the high level decision making algorithms.
+
+The scenario is composed of a MUM-T, where there is a leading drone, controlled by the user, and loyal wingman drones protecting the leading drone and a protected area from kamikaze attacks.
 
 For the execution of the script it is necessary:
 
