@@ -14,6 +14,8 @@ Dependencies:
 	- pip install pygame
 - NUMPY -> https://numpy.org/
 	- pip install numpy
+- MATPLOTLIB -> https://matplotlib.org/stable/users/getting_started/index.html
+ 	- pip install matplotlib	
 
 
 Execute: main.py
