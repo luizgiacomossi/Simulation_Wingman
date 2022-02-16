@@ -20,20 +20,24 @@ Dependencies:
 
 	->To run the simulator, run the following script: main.py
 
-In main:
+In main, change the following line to:
 
-	if running_PSO = False # run simulation with offline parameters
+	running_PSO = False # run simulation with offline parameters
+
+	or
 	
-	if running_PSO = True #  run simulation with PSO optimization
+	running_PSO = True #  run simulation with PSO optimization
 	
-	# change params in the following function
+	# change the optimization params in the following function
 	
 	simulation.create_swarm_uav(NUM_DRONES, 
                                 NUM_KAMIKAZES, 
                                 distance_chase = 306.6,
                                 distance_formation = 100.1)
 
-* Up and Down arrows to control the simulation acceleration 
+UI Controls: 
+	* Mouse right click on desired position for the leading drone control
+	* Up and Down arrows to control the simulation acceleration 
 
 Files Description:
  
