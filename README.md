@@ -21,8 +21,10 @@ Dependencies:
 	->To run the simulator, run the following script: main.py
 
 In main:
-	running_PSO = False # for run simulation with desired parameters
-	if running_PSO = True # for run simulation with PSO optimization
+	if running_PSO = False # run simulation with offline parameters
+	
+	if running_PSO = True #  run simulation with PSO optimization
+	
 	# change params in the following function
 	
 	simulation.create_swarm_uav(NUM_DRONES, 
