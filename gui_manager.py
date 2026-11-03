@@ -45,6 +45,7 @@ class GUIManager:
         """Updates responsive layout bounds to match the current screen/window dimensions."""
         self.screen_width = screen_w
         self.screen_height = screen_h
+        self.minimap_height = max(80, int(self.minimap_width * (screen_h / screen_w)))
         self.minimap_rect = pg.Rect(
             screen_w - self.minimap_width - 20,
             screen_h - self.minimap_height - 25,

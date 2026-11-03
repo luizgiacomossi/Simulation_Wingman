@@ -44,10 +44,15 @@ class SwarmManager(object):
     def create_swarm(self, num_loyal=NUM_DRONES, num_kamikazes=NUM_KAMIKAZES,
                      distance_chase=306.6, kp=0.625, kv=4.5,
                      distance_formation=DISTANCE_LEADER, distance_rings_formation=1.2,
-                     protected_area_pos=vec2(1800, 170), protected_area_radius=240):
+                     protected_area_pos=None, protected_area_radius=None):
         """
         Initializes the entire multi-UAV battlefield with leader, wingmen, kamikazes, and protected area.
         """
+        if protected_area_pos is None:
+            protected_area_pos = vec2(WORLD_WIDTH - 100, min(170, WORLD_HEIGHT * 0.2))
+        if protected_area_radius is None:
+            protected_area_radius = min(240, int(WORLD_HEIGHT * 0.26))
+
         self.num_loyalwingman = num_loyal
         self.num_kamikazes = num_kamikazes
         self.distance_chase = distance_chase

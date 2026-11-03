@@ -1,11 +1,6 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
-# World Physics Parameters (fixed bounding box for simulation logic)
-WORLD_WIDTH = 1900
-WORLD_HEIGHT = 900
-
-# Screen / Window Parameters (auto-detected from laptop display)
 def get_auto_screen_resolution(margin_w=70, margin_h=100):
     """Detects current laptop/desktop screen resolution and returns optimal window size."""
     try:
@@ -24,6 +19,9 @@ def get_auto_screen_resolution(margin_w=70, margin_h=100):
     return 1600, 900
 
 SCREEN_WIDTH, SCREEN_HEIGHT = get_auto_screen_resolution()
+# World Physics Parameters (1:1 with laptop display)
+WORLD_WIDTH = SCREEN_WIDTH
+WORLD_HEIGHT = SCREEN_HEIGHT
 PIX2M = 0.01  # factor to convert from pixels to meters
 M2PIX = 100.0  # factor to convert from meters to pixels
 NUM_DRONES = 10# Number of simultaneous drones
