@@ -10,6 +10,7 @@ from animation import Explosion_kamikaze, ProtectedArea
 from utils import generate_coordenates_kamikaze
 from quadtree import Quadtree, Rect
 from display_manager import DisplayManager
+from experiment_manager import ExperimentManager
 import matplotlib.pyplot as plt
 import statistics
 
@@ -74,78 +75,12 @@ class ProcessorUserInput:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r:   
                    self.simulation.accelerated_factor = 1
 
-class Rate_Simulation(object):
-    def __init__(self):
-        super().__init__()
-        self.history_enemies_destroyed = []
-        self.iterations = 0
-        self.time = []
-        self.counter_loyalwingman_survived = []
-        self.quality = []
-
-    def print(self):
-
-        print('=========================================||Result||========================================')
-        print(f'Média de kamikazes destruidos : {statistics.mean(self.history_enemies_destroyed)} Std: {statistics.stdev(self.history_enemies_destroyed)} Var: {statistics.variance(self.history_enemies_destroyed)}')
-        print(f'Média de Tempo de sobrevivencia  : {statistics.mean(self.time)} Std: {statistics.stdev(self.time)} Var: {statistics.variance(self.time)}')
-        print(f'Média de loyalwingman que restaram : {statistics.mean(self.counter_loyalwingman_survived)} Std: {statistics.stdev(self.counter_loyalwingman_survived)} Var: {statistics.variance(self.counter_loyalwingman_survived)}')
-        print('===========================================================================================')
-  
-    def plot_graphs(self):
-        # x = iteration y = enemies destroyed
-        # Plot the responses for different events and regions
-        plt.rc("text", usetex = True )
-        plt.rcParams.update({ 'font.family' : 'serif' })
-        plt.rcParams.update({ 'font.size' : 16})
- 
-        plt.close()
-        plt.plot([y for y in range(0,self.iterations)], self.history_enemies_destroyed)
-        plt.ylabel('Iteration vs Enemies Destroyed')
-        plt.grid()
-        plt.show()
-
-        plt.plot([y for y in range(0,self.iterations)], self.time )
-        plt.ylabel('Iteration vs Time')
-        plt.grid()
-        plt.show()
-
-        plt.plot([y for y in range(0,self.iterations)], self.quality )
-        plt.ylabel('Iteration vs Quality')
-        plt.grid()
-        plt.show()
-
-        plt.plot([y for y in range(0,self.iterations)], self.counter_loyalwingman_survived )
-        plt.ylabel('Number of loyalwingman survided')
-        plt.grid()
-        plt.show()
-
-    def save_iteration(self, enemies_destroyed, time_elapsed, loyal_wingman_survived , quality ):
-
-        self.history_enemies_destroyed.append(enemies_destroyed)    
-        self.time.append(time_elapsed)
-        self.counter_loyalwingman_survived.append(loyal_wingman_survived)
-        self.quality.append(quality)
-        self.iterations += 1
-
-    def evaluate(self, enemies_destroyed, time_elapsed, loyal_wingman_survived ):
-        """
-        Evaluates the simulation based on the metrics.
-
-        :return: reward for the current situation.
-        :rtype: float.
-        """
-
-        # reward é baseada no calculo de:
-            # enemies_destroyed
-            # time_elapsed
-            # loyal_wingman_survived
-
-        reward =  enemies_destroyed**2  + 10 * time_elapsed - loyal_wingman_survived*1000  
- 
-        # medida de qualidade:
-            # medida de qualidade recompensa o robô por cumprir o caminho
-            # mais rapidamente, enquanto o penaliza por desviar da linha
-        return reward  #
+class Rate_Simulation(ExperimentManager):
+    """
+    Maintains backward compatibility with Rate_Simulation while leveraging
+    ExperimentManager for CSV export, telemetry, and metrics tracking.
+    """
+    pass
 
 class ScreenSimulation(DisplayManager):
     """

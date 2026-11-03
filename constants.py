@@ -45,3 +45,6 @@ PROB_FREEZING = 0.85
 
 # explosion parameteres
 TIME_EXPLOSION = 0.3
+
+# Experiment & Telemetry Saving
+SAVE_RESULTS = True
