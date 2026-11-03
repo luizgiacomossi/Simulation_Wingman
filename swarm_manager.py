@@ -88,12 +88,15 @@ class SwarmManager(object):
             self.leadingdrone.set_message_bus(self.message_manager, agent_id="LEADER")
 
         # Create Loyal Wingman Swarm
+        spacing_spawn = max(35.0, (WORLD_WIDTH * 0.25) / max(1, num_loyal))
         for d in range(num_loyal):
             bt = LoyalWingmanBehaviorTree()
             self.behaviors.append(bt)
+            spawn_x = WORLD_WIDTH - 50 - (d * spacing_spawn)
+            spawn_y = 30 + (d % 2) * 40
             drone = LoyalWingman(
-                random.uniform(WORLD_WIDTH - 300, WORLD_WIDTH),
-                random.uniform(0, 30),
+                spawn_x,
+                spawn_y,
                 bt,
                 self.window,
                 self.protected_area,
@@ -174,12 +177,30 @@ class SwarmManager(object):
             list_pos = self.leadingdrone.set_formation()
             self.goto_formation(list_pos)
 
+    def set_formation_strategy(self, name: str) -> bool:
+        """Changes active formation geometry (CIRCLE, WEDGE, WALL, ECHELON)."""
+        if self.leadingdrone is not None:
+            return self.leadingdrone.set_formation_strategy(name)
+        return False
+
     def goto_formation(self, targets):
+        if not self.swarm or not targets:
+            return
+
         slots_dict = {}
-        for i, drone in enumerate(self.swarm):
-            if i < len(targets):
-                slots_dict[drone.agent_id or f"WINGMAN_{i}"] = targets[i]
-                drone.set_target(targets[i])
+        if self.leadingdrone is not None and hasattr(self.leadingdrone, 'formation_manager'):
+            # Optimal Hungarian 1-to-1 matching to prevent crossing trajectories during re-formation
+            assigned = self.leadingdrone.formation_manager.assign_optimal_slots(self.swarm, targets)
+            for drone in self.swarm:
+                slot_pos = assigned.get(drone.agent_id)
+                if slot_pos is not None:
+                    drone.set_target(slot_pos)
+                    slots_dict[drone.agent_id] = slot_pos
+        else:
+            for i, drone in enumerate(self.swarm):
+                if i < len(targets):
+                    drone.set_target(targets[i])
+                    slots_dict[drone.agent_id or f"WINGMAN_{i}"] = targets[i]
 
         if self.leadingdrone is not None:
             self.leadingdrone.broadcast_formation_command(

@@ -9,6 +9,7 @@ from weapons import *
 import numpy as np
 from quadtree import Quadtree, Rect
 from message_manager import MessageManager, TacticalMessage, MessageTopic
+from formation import FormationManager
 
 vec2 = pg.math.Vector2
 
@@ -827,6 +828,8 @@ class LeadingDrone(Vehicle):
         self.distance_formation = distance_leader
         self.distance_rings_formation = distance_rings_formation
         self.destroyed = False
+        self.formation_manager = FormationManager(default_strategy="CIRCLE")
+        self.current_formation_name = "CIRCLE"
 
     def destroy(self):
         self.destroyed = True
@@ -887,33 +890,22 @@ class LeadingDrone(Vehicle):
 
     def set_formation(self, num_drones = NUM_DRONES):
         '''
-            This method returns the positions for the loyal wingman surrounding the leading drone
-
-            input: number of drones in formation
-            return: list of positions
+        Calculates slots using the active FormationStrategy (CIRCLE, WEDGE, WALL, ECHELON).
         '''
-        distance_leader = self.distance_formation
-        if num_drones > 1: # check if there is still loyalwingmen
-            step_angle = 2 * pi / num_drones 
-        else:
-            step_angle = 0
+        slots = self.formation_manager.compute_formation_slots(
+            leader_pos=self.location,
+            leader_heading=self.rotation,
+            num_drones=num_drones,
+            spacing=self.distance_formation
+        )
+        return slots
 
-        pos = self.get_position()
-        #print(f'position leader:{pos}')
-        ang = 0
-        list_positions = []
-
-        # calculates position of drone in formation
-        for _ in range(num_drones):
-            x = pos[0] + distance_leader*cos(ang)
-            y = pos[1] + distance_leader*sin(ang)
-            #print(f'position wingman:{(x,y)}')
-            #print(f'angulo: {ang*180/pi}')
-            ang += step_angle
-            
-            list_positions.append( vec2( x, y ) )
-
-        return list_positions
+    def set_formation_strategy(self, name: str) -> bool:
+        """Switches active tactical formation strategy."""
+        ok = self.formation_manager.set_strategy(name)
+        if ok:
+            self.current_formation_name = self.formation_manager.active_strategy_name
+        return ok
 
     def set_formation_2rings(self, num_drones = NUM_DRONES):
         '''

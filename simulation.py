@@ -44,6 +44,16 @@ class ProcessorUserInput:
                 for _ in self.simulation.swarm:
                     _.set_debug()
 
+            # Keys 1-4: Tactical Formations
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_1:
+                self.simulation.set_formation_strategy("CIRCLE")
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_2:
+                self.simulation.set_formation_strategy("WEDGE")
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_3:
+                self.simulation.set_formation_strategy("WALL")
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_4:
+                self.simulation.set_formation_strategy("ECHELON")
+
             # Key 'c' pressed -> Center camera on leader
             if event.type == pygame.KEYDOWN and event.key == pygame.K_c:
                 if hasattr(self.simulation, 'leadingdrone') and hasattr(self.simulation.leadingdrone, 'location'):
@@ -163,6 +173,9 @@ class Simulation(object):
 
     def set_target_leader(self, target):
         self.swarm_manager.set_target_leader(target)
+
+    def set_formation_strategy(self, name: str) -> bool:
+        return self.swarm_manager.set_formation_strategy(name)
 
     def get_number_running_simultations(self):
         return len(self.swarm_manager.swarm)

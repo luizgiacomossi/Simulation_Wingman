@@ -290,10 +290,11 @@ class GUIManager:
             screen.blit(t_val2, (255, y - 1))
             y += 20
 
-        # Leader Status Subtext
+        # Leader & Formation Status Subtext
         y += 4
         leader_alive = simulation.leadingdrone is not None and getattr(simulation.leadingdrone, 'destroyed', False) is not True
-        lead_str = "Leader: ACTIVE" if leader_alive else "Leader: DESTROYED"
+        formation_name = getattr(simulation.leadingdrone, 'current_formation_name', 'CIRCLE') if simulation.leadingdrone else 'N/A'
+        lead_str = f"Leader: {'ACTIVE' if leader_alive else 'DESTROYED'} | [{formation_name}]"
         lead_col = (70, 225, 120) if leader_alive else (255, 70, 70)
         t_lead = self.font_bold.render(lead_str, True, lead_col)
         screen.blit(t_lead, (35, y))
@@ -425,6 +426,15 @@ class GUIManager:
             val_lead = self.font_mono.render(f"{dist_lead:0.1f} px", True, (220, 235, 250))
             screen.blit(val_lead, (card_rect.x + 130, y))
 
+        # Formation Details (if Leading Drone)
+        if self.selected_type == "Leading Drone":
+            y += 20
+            lbl_form = self.font_small.render("Formation Geometry:", True, (135, 160, 185))
+            screen.blit(lbl_form, (card_rect.x + 16, y))
+            form_name = getattr(agent, 'current_formation_name', 'CIRCLE')
+            val_form = self.font_bold.render(f"[ {form_name} ]", True, (60, 225, 245))
+            screen.blit(val_form, (card_rect.x + 130, y))
+
         # Weapons Inventory (if Loyal Wingman)
         if self.selected_type == "Loyal Wingman":
             role = getattr(agent, 'tactical_role', 'INTERCEPTOR')
@@ -471,11 +481,12 @@ class GUIManager:
     def _draw_bottom_toolbar(self, screen, simulation):
         chips = [
             ("SPACE", "Pause/Play"),
+            ("1-4", "Formations"),
             ("L-Click", "Select/Move"),
-            ("R-Click", "Spawn Kamikaze"),
-            ("C", "Center Leader"),
-            ("0", "Reset View"),
-            ("D", "Debug/Rings"),
+            ("R-Click", "Kamikaze"),
+            ("C", "Center"),
+            ("0", "Reset"),
+            ("D", "Rings"),
             ("+/-", "Speed"),
             ("P", "Plot"),
             ("H", "Hide HUD")
