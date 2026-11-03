@@ -141,9 +141,9 @@ class Vehicle(object):
         d = self.desired.magnitude() 
 
         try:
-            dist = copy.deepcopy(self.desired.normalize()) # obtem direção
-        except: # If the magnitude of desired is zero it cant be normalized
-            dist = copy.deepcopy(self.desired)
+            dist = self.desired.normalize() # get direction
+        except: # If magnitude of desired is zero it cant be normalized
+            dist = vec2(self.desired)
         
         r = RADIUS_TARGET
         # Modulates the force
@@ -511,9 +511,9 @@ class VehiclePF(object):
         d = self.desired.magnitude() 
 
         try:
-            dist = copy.deepcopy(self.desired.normalize()) # obtem direção
-        except: # If the magnitude of desired is zero it cant be normalized
-            dist = copy.deepcopy(self.desired)
+            dist = self.desired.normalize() # get direction
+        except: # If magnitude of desired is zero it cant be normalized
+            dist = vec2(self.desired)
         
         r = RADIUS_TARGET
         # Modulates the force
@@ -778,9 +778,9 @@ class LeadingDrone(Vehicle):
         d = self.desired.magnitude() 
 
         try:
-            dist = copy.deepcopy(self.desired.normalize()) # obtem direção
-        except: # If the magnitude of desired is zero it cant be normalized
-            dist = copy.deepcopy(self.desired)
+            dist = self.desired.normalize() # get direction
+        except: # If magnitude of desired is zero it cant be normalized
+            dist = vec2(self.desired)
         
         r = RADIUS_TARGET
         # Modulates the force

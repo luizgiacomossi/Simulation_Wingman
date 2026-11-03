@@ -36,25 +36,24 @@ class Aircraft(pg.sprite.Sprite):
         Represents a simple visual animated drone 
         Can load sprites, rotate and update animation
     """
+    _cached_sprites = None
+
     def __init__(self):
         pg.sprite.Sprite.__init__(self)
-        self.sprites = []
+        if Aircraft._cached_sprites is None:
+            Aircraft._cached_sprites = []
+            for i in range(0, 5):
+                img = pg.image.load(f'models/Drone5/sprite_{i}.png')
+                w = max(1, int(img.get_width() * 0.1))
+                h = max(1, int(img.get_height() * 0.1))
+                scaled = pg.transform.smoothscale(img, (w, h)) if hasattr(pg.transform, 'smoothscale') else pg.transform.scale(img, (w, h))
+                Aircraft._cached_sprites.append(scaled)
 
-        for i in range(0,5):
-            self.sprites.append(pg.image.load(f'models/Drone5/sprite_{i}.png'))
-
+        self.sprites = Aircraft._cached_sprites
         self.atual = 0
-        # inherited from the pygame sprite class it is the first element of the drone
         self.image = self.sprites[self.atual]
-        # scales down drone sprites to (70,70)
-        self.image = pg.transform.scale(self.image,(SIZE_DRONE*2,SIZE_DRONE*2))
-        # rect is inherited from Sprite
-        # defines the sprite's position on the screen
-        # take the image size
         self.rect = self.image.get_rect()
-        self.scale = 0.1
-        # pega o canto superior esquerdo, posição qualquer
-        #self.rect.topleft = 100,100
+        self.scale = 1.0
 
     def colorize(self, newColor=(40,40,40)):
             """
@@ -65,28 +64,19 @@ class Aircraft(pg.sprite.Sprite):
             :return: New colorized Surface instance
             """
             image = self.image.copy()
-
-            # zero out RGB values
-            #image.fill((0, 0, 0, 255), None, pg.BLEND_RGBA_MULT)
-            # add in new RGB values
             image.fill(newColor[0:3] + (0,), None, pg.BLEND_RGBA_ADD)
             self.image = image
 
     def update(self, position, angle, size = SIZE_DRONE* PIX2M):
-        
-        # animation update speed is controle by this parameter
         self.atual += 1
         if self.atual >= len(self.sprites):
             self.atual = 0
 
-        self.image = self.sprites[round(self.atual)]
-    
-        # Rotates image -> angle should be in degrees
-        # rotozoom(Surface, angle, scale) -> Surface
-        self.image = pg.transform.rotozoom(self.image, -angle*180/pi - 90, self.scale)
+        base_image = self.sprites[round(self.atual)]
+        deg = int(-angle * 180 / pi - 90) % 360
+        self.image = pg.transform.rotate(base_image, deg)
         self.rect = self.image.get_rect()
-        # positions center of rect in acual drone position
-        self.rect.center = position.x,position.y
+        self.rect.center = position.x, position.y
 
 class Tree(pg.sprite.Sprite):
     """
@@ -137,11 +127,24 @@ class Kamikaze_drone(Aircraft):
         Represents a simple visual animated drone 
         Can load sprites, rotate and update animation
     """
+    _cached_sprites = None
+
     def __init__(self):
-        super().__init__()
-        self.sprites = []
-        for i in range(0,5):
-            self.sprites.append(pg.image.load(f'models/kamikaze/sprite_{i}.png'))
+        pg.sprite.Sprite.__init__(self)
+        if Kamikaze_drone._cached_sprites is None:
+            Kamikaze_drone._cached_sprites = []
+            for i in range(0, 5):
+                img = pg.image.load(f'models/kamikaze/sprite_{i}.png')
+                w = max(1, int(img.get_width() * 0.1))
+                h = max(1, int(img.get_height() * 0.1))
+                scaled = pg.transform.smoothscale(img, (w, h)) if hasattr(pg.transform, 'smoothscale') else pg.transform.scale(img, (w, h))
+                Kamikaze_drone._cached_sprites.append(scaled)
+
+        self.sprites = Kamikaze_drone._cached_sprites
+        self.atual = 0
+        self.image = self.sprites[self.atual]
+        self.rect = self.image.get_rect()
+        self.scale = 1.0
     
     def explode(self):
         self.sprites = []

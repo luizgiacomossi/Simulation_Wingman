@@ -70,26 +70,22 @@ def limit(v2, max):
         :return v: returns vector 
         :rtype v: vector2
     """
-    v = copy.deepcopy(v2)
+    v = pg.math.Vector2(v2)
     if v.length() > max:
         v.scale_to_length(max)
     return v
 
 def limit3d(v3, max):
     """
-        Limits magnitude of vector2
+        Limits magnitude of vector3 or vector2
 
-        :param v2: Vector2 to be normalized
-        :type v2: pygame.Vector2
+        :param v3: Vector to be normalized
         :param max: maximum length of vector
-        :type max: int
         :return v: returns vector 
-        :rtype v: vector2
     """
-    v = copy.deepcopy(v3)
+    v = pg.math.Vector3(v3) if hasattr(v3, 'z') else pg.math.Vector2(v3)
     if v.length() > max:
-        v /= v.length()
-        v *= max
+        v.scale_to_length(max)
     return v
     
 def constrain(v2,w,h):

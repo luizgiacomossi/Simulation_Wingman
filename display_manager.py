@@ -35,6 +35,9 @@ class DisplayManager(object):
         self.is_panning = False
         self.pan_start = pygame.math.Vector2(0, 0)
 
+        # Text rendering surface cache
+        self._text_cache = {}
+
         # Background texture
         self.background_image = None
         try:
@@ -115,13 +118,28 @@ class DisplayManager(object):
         else:
             self.world_surface.fill((40, 44, 52))
 
+    def get_rendered_text(self, font, text: str, color):
+        """Caches rendered font surfaces to avoid re-rasterizing static strings every frame."""
+        key = (id(font), text, color)
+        surf = self._text_cache.get(key)
+        if surf is None:
+            surf = font.render(text, True, color)
+            self._text_cache[key] = surf
+        return surf
+
     def render_to_screen(self):
         """
         Transfers the world surface to the visible display screen using viewport clipping.
         """
-        self.screen.fill((25, 25, 28))
         zoom = self.zoom_level
         offset = self.offset
+
+        # Fast path: 1.0x unshifted zoom avoids expensive transform.scale on 1.7M pixels
+        if abs(zoom - 1.0) < 0.001 and abs(offset.x) < 0.001 and abs(offset.y) < 0.001:
+            self.screen.blit(self.world_surface, (0, 0))
+            return
+
+        self.screen.fill((25, 25, 28))
 
         if zoom > 1.0:
             wx = -offset.x / zoom
@@ -150,19 +168,19 @@ class DisplayManager(object):
 
     def WriteLegendOnCanvas(self, simulation, accelerated_factor, time_running, history):
         """Draws HUD telemetry directly onto the unscaled screen."""
-        img = self.font24.render('Loyal Wingman Simulation', True, LIGHT_BLUE)
+        img = self.get_rendered_text(self.font24, 'Loyal Wingman Simulation', LIGHT_BLUE)
         self.screen.blit(img, (20, 20))
-        img = self.font20.render(f'Accelerated Factor: {accelerated_factor}', True, LIGHT_BLUE)
+        img = self.get_rendered_text(self.font20, f'Accelerated Factor: {accelerated_factor}', LIGHT_BLUE)
         self.screen.blit(img, (20, 45))
-        img = self.font20.render(f'Zoom: {self.zoom_level:.2f}x (Scroll to zoom, Middle-click to pan)', True, (180, 220, 255))
+        img = self.get_rendered_text(self.font20, f'Zoom: {self.zoom_level:.2f}x (Scroll to zoom, Middle-click to pan)', (180, 220, 255))
         self.screen.blit(img, (20, 65))
-        img = self.font24.render(f'#loyal wingman: {simulation.get_number_running_simultations()}', True, LIGHT_BLUE)
+        img = self.get_rendered_text(self.font24, f'#loyal wingman: {simulation.get_number_running_simultations()}', LIGHT_BLUE)
         self.screen.blit(img, (20, 90))
-        img = self.font24.render(f'#KamikazesDestroyed: {simulation.get_kamikazes_destroyed()}', True, LIGHT_BLUE)
+        img = self.get_rendered_text(self.font24, f'#KamikazesDestroyed: {simulation.get_kamikazes_destroyed()}', LIGHT_BLUE)
         self.screen.blit(img, (20, 115))
-        img = self.font24.render(f'Time: {time_running:0.2f}', True, LIGHT_BLUE)
+        img = self.get_rendered_text(self.font24, f'Time: {time_running:0.2f}', LIGHT_BLUE)
         self.screen.blit(img, (20, 140))
-        img = self.font24.render(f'Iteration: {history.iterations+1}', True, LIGHT_BLUE)
+        img = self.get_rendered_text(self.font24, f'Iteration: {history.iterations+1}', LIGHT_BLUE)
         self.screen.blit(img, (20, 165))
-        img = self.font20.render(f'Params: #loyal {simulation.num_loyalwingman} #kamikazes {simulation.num_kamikazes}', True, LIGHT_BLUE)
+        img = self.get_rendered_text(self.font20, f'Params: #loyal {simulation.num_loyalwingman} #kamikazes {simulation.num_kamikazes}', LIGHT_BLUE)
         self.screen.blit(img, (20, 190))

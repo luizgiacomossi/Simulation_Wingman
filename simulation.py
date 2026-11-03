@@ -295,7 +295,7 @@ class Simulation(object):
         #draw leading drone
         pygame.draw.circle(self.canvas,(200, 250, 200), self.leadingdrone.get_position() , radius= self.distance_formation , width = 3)
         self.leadingdrone.draw(self.canvas)
-        img = self.screenSimulation.font20.render(f'Leading Drone', True, LIGHT_BLUE)
+        img = self.screenSimulation.get_rendered_text(self.screenSimulation.font20, 'Leading Drone', LIGHT_BLUE)
         self.canvas.blit(img, self.leadingdrone.get_position()+(0,20))
 
         ## ------
@@ -303,13 +303,13 @@ class Simulation(object):
             _.draw(self.canvas)
             index += 1
             # writes drone id
-            img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, LIGHT_BLUE)
+            img = self.screenSimulation.get_rendered_text(self.screenSimulation.font20, f'LoyalWingman {index}', LIGHT_BLUE)
             self.canvas.blit(img, _.get_position()+(0,20))
 
             # writes drone ammo available
             ammo_vaporizer = _.vaporizer_gun.get_ammo_available()
-            ammo_freezing = _.vaporizer_gun.get_ammo_available()
-            img = self.screenSimulation.font15.render(f'V: {ammo_vaporizer} F:{ammo_freezing} ', True, LIGHT_BLUE)
+            ammo_freezing = _.freezing_gun.get_ammo_available()
+            img = self.screenSimulation.get_rendered_text(self.screenSimulation.font15, f'V: {ammo_vaporizer} F:{ammo_freezing} ', LIGHT_BLUE)
             self.canvas.blit(img, _.get_position()+(0,30))
 
         #draw protected area
@@ -319,10 +319,10 @@ class Simulation(object):
             _.draw(self.canvas) 
             index += 1
             # writes drone id
-            img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
+            img = self.screenSimulation.get_rendered_text(self.screenSimulation.font20, f'Kamikaze {index}', LIGHT_BLUE)
             self.canvas.blit(img, _.get_position()+(0,20))
             # writes drone current behavior
-            img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
+            img = self.screenSimulation.get_rendered_text(self.screenSimulation.font15, _.behavior.get_current_state(), LIGHT_BLUE)
             self.canvas.blit(img, _.get_position()+(0,30))
 
         #-------- end draw animations ---------
