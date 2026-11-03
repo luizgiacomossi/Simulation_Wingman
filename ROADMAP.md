@@ -96,19 +96,56 @@ flowchart TD
 
 ---
 
-## Phase 4: Dynamic Ballistics & Kamikaze Evasion
+## Phase 4: Dynamic Ballistics, Adversarial Tactics & Advanced Behavior Trees
 
-- [x] **STEP 4.1: Projectile Kinematics & Visual Tracers**
+- [x] **STEP 4.1: Projectile Kinematics & Visual Tracers** (`4826445`)
   - **Files:** `weapons.py`, `vehicle.py`, `swarm_manager.py`, `test_ballistics.py`
   - **Scope:** Replaced instantaneous hitscan weapon mechanics with physical `Projectile` instances (`VaporizerBolt` railgun/plasma round at 850 px/s, `FreezingBolt` cryogenic pulse at 650 px/s). Implemented first-order lead pursuit calculation for moving targets, range and lifetime limits, and multi-segment dynamic gradient visual tracers with glowing incandescent cores. Integrated spatial Quadtree collision checks in `SwarmManager.update()` and decoupled explosions to occur upon physical projectile impact.
   - **Result:** Full unit test suite (`test_ballistics.py`) passed; 120 headless frames benchmarked at over 5,300 FPS; 50 combat benchmark episodes completed with 100% survival rate and authentic ballistic kills.
 
-- [ ] **STEP 4.2: Kamikaze Evasive Steering & Jinking**
+- [ ] **STEP 4.2: Kamikaze Evasive Steering & Jinking Maneuvers**
+  - **Files to modify:** `vehicle.py`, `state_machine.py`
+  - **Scope:** Hostile drones sense incoming projectile trajectories and defensive lock-on; inject lateral sinusoidal oscillatory acceleration $\mathbf{a}_{\text{jink}} = A \sin(\omega t) \mathbf{n}_{\perp}$ and high-G breakout turns to defeat 1st-order lead computing.
+  - **Acceptance Test:** Kamikazes exhibit dynamic evasive trajectories; weapon hit probability drops under unguided fire.
+
+- [ ] **STEP 4.3: Adversarial Coordinated Attack Patterns (Salvos, Pincers & Decoys)**
+  - **Files to create/modify:** `adversarial_coordinator.py`, `swarm_manager.py`
+  - **Scope:** Implement hostile swarm coordination:
+    1. **Time-on-Target (ToT) Salvo:** Kamikazes hold on perimeter and strike simultaneously to saturate defenses.
+    2. **Multi-Axis Pincer Attack:** Threats converge simultaneously from diametrically opposed vectors (e.g., North and South).
+    3. **Decoy & Feint Maneuver:** Heavy bait drones draw interceptors out of escort envelope while high-speed penetrators target the unprotected leader.
+  - **Acceptance Test:** Hostile attacks occur in synchronized waves, stressing the defensive capacity of the wingman swarm.
+
+- [ ] **STEP 4.4: Advanced Loyal Wingman Behavior Tree Overhaul (`decision_making.py`)**
+  - **Files to modify:** `decision_making.py`, `behavior_tree.py`
+  - **Scope:** Restructure the Loyal Wingman Behavior Tree to counter advanced adversarial tactics:
+    1. **Fire Discipline Condition:** Inhibit firing against jinking targets unless angular track error is low ($\Delta \theta \le \epsilon$).
+    2. **Escort Leash / Tethering Condition:** Abort overextended chases if distance to leader exceeds $R_{\text{leash}}$, falling back to protect the high-value asset against decoys.
+    3. **Out-of-Ammo Sacrificial Ramming Branch:** When cartridges are exhausted and threat breaches inner ring, execute sacrificial kinetic interception (body-block) to save the leader.
+  - **Acceptance Test:** Wingmen conserve ammo, maintain tight escort perimeter against decoys, and execute physical body-blocks when out of ammo.
 
 ---
 
 ## Phase 5: Monte Carlo Sweeps & Publication Assets (PhD/Paper)
 
 - [ ] **STEP 5.1: Automated Matrix Sweep Orchestrator (`sweep_runner.py`)**
+  - **Files to create:** `sweep_runner.py`
+  - **Scope:** Multi-core parallel Monte Carlo runner executing 4-condition ablation matrix:
+    - *Scenario A:* Baseline (Naive enemies vs Basic BT).
+    - *Scenario B:* Stress Test (Jinking + Saturated Salvos vs Basic BT).
+    - *Scenario C:* Advanced MUM-T (Jinking + Salvos vs Advanced BT + Hungarian Allocation).
+    - *Scenario D:* Electronic Warfare (Datalink Packet Loss $0\% - 80\%$).
+  - **Acceptance Test:** Script executes 1,000+ episodes in under 45 seconds and exports clean CSV dataset.
+
 - [ ] **STEP 5.2: Publication Figure Generator (`plot_generator.py`)**
+  - **Files to create:** `plot_generator.py`
+  - **Scope:** Generates IEEE/AIAA publication-quality vector plots (PDF/SVG):
+    - Leader/Base Survival Sigmoids vs Threat Ratio ($\frac{M}{N} \in [0.5..3.0]$).
+    - Boxplots with ANOVA significance ($p < 0.001$) across tactical formations.
+    - Datalink resilience curves under EW packet loss.
+  - **Acceptance Test:** Clean PDF figures outputted to `experiments/figures/`.
+
 - [ ] **STEP 5.3: Automated LaTeX Summary Table Generator**
+  - **Files to modify:** `plot_generator.py`
+  - **Scope:** Output ready-to-paste `\begin{table} ... \end{table}` LaTeX snippets with mean, standard deviation, and p-values for Overleaf paper.
+  - **Acceptance Test:** Generated LaTeX snippet compiles error-free in Overleaf.
