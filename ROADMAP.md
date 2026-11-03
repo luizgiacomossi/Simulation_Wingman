@@ -91,8 +91,24 @@ flowchart TD
 ## Phase 3: Interactive Real-Time Dashboard (`dashboard.py`)
 
 - [ ] **STEP 3.1: Thread-Safe Inter-Process Communication (IPC)**
+  - **Files to create/modify:** `dashboard.py`, `simulation.py`
+  - **Scope:** Set up bidirectional `multiprocessing.Queue` pipeline between Pygame and a secondary Tkinter process.
+  - **Acceptance Test:** IPC test demonstrating sub-5ms message roundtrip without blocking the 60Hz Pygame loop.
+
 - [ ] **STEP 3.2: Tkinter Parameter Dashboard with Live Sliders**
+  - **Files to modify:** `dashboard.py`
+  - **Scope:** Create clean desktop UI with sliders for `distance_chase`, `formation_distance`, `num_kamikazes`, and `speed`.
+  - **Acceptance Test:** Moving a slider immediately updates the parameter in the active Pygame simulation.
+
 - [ ] **STEP 3.3: Embedded Real-Time Telemetry & Matplotlib Graphs**
+  - **Files to modify:** `dashboard.py`
+  - **Scope:** Embed `FigureCanvasTkAgg` in Tkinter window with live-updating fitness plot and table export.
+  - **Acceptance Test:** Dashboard renders updating graph at 10Hz without GUI freezing.
+
+- [ ] **STEP 3.4: Bidirectional Agentic IPC & Dashboard Co-Pilot Console**
+  - **Files to modify:** `dashboard.py`
+  - **Scope:** Expose programmatic actuation API for dashboard widgets (`set_slider()`, `switch_formation()`, `set_tactical_priority()`). Embed an interactive operator chat console / rationale feed in the Tkinter window for human-in-the-loop dialogue.
+  - **Acceptance Test:** External IPC commands programmatically adjust slider positions and trigger simulation state changes.
 
 ---
 
@@ -124,15 +140,16 @@ flowchart TD
     3. **Out-of-Ammo Sacrificial Ramming Branch:** When cartridges are exhausted and threat breaches inner ring, execute sacrificial kinetic interception (body-block) to save the leader.
   - **Acceptance Test:** Wingmen conserve ammo, maintain tight escort perimeter against decoys, and execute physical body-blocks when out of ammo.
 
-- [ ] **STEP 4.5: Hierarchical SLM Tactical Commander (`tactical_commander_slm.py`)**
-  - **Files to create/modify:** `tactical_commander_slm.py`, `vehicle.py`, `swarm_manager.py`, `gui_manager.py`
-  - **Scope:** Integrate an edge-deployable Small Language Model (SLM) on the Leading Drone as an explainable tactical mission commander:
+- [ ] **STEP 4.5: Hierarchical SLM Tactical Commander & Dashboard Co-Pilot (`tactical_commander_slm.py`)**
+  - **Files to create/modify:** `tactical_commander_slm.py`, `vehicle.py`, `swarm_manager.py`, `gui_manager.py`, `dashboard.py`
+  - **Scope:** Integrate an edge-deployable Small Language Model (SLM) on the Leading Drone as an explainable mission commander and active dashboard co-pilot:
     1. **Hierarchical Two-Tier Control:** Strategic reasoning at low frequency ($0.5 - 2\text{ Hz}$ or event-triggered) while reactive physics and Behavior Trees run at $60\text{ Hz}$.
-    2. **Tactical Context Prompting:** Formats battlefield telemetry (threat vectors, swarm ammo, base status, casualties) into compact structured prompts.
-    3. **Explainable AI (XAI) Output:** Generates structured JSON commands (`formation`, `priority`, `roe`) alongside natural language tactical reasoning (`tactical_assessment`).
-    4. **Datalink Integration:** Dispatches orders as `TacticalMessage` via `MessageManager`.
-    5. **Dual-Mode Execution:** Local SLM inference for interactive GUI sessions and high-speed heuristic oracle fallback for 8,000+ FPS headless Monte Carlo sweeps.
-  - **Acceptance Test:** SLM assesses novel threat waves, outputs valid JSON tactical commands, logs explainable natural language rationale to HUD, and runs without degrading simulation FPS.
+    2. **Dashboard Telemetry Monitoring:** Continuously monitors live metrics stream (base HP, casualty rates, swarm ammo, threat density, fitness convergence).
+    3. **Agentic Tool Calling (Function Calling):** SLM possesses executable tools: `set_slider_parameter(param, val)` (e.g., `distance_chase`, `formation_distance`), `switch_formation(name)`, `set_tactical_priority(priority)`.
+    4. **Closed-Loop Dashboard Actuation:** SLM decisions automatically move the physical GUI sliders and widgets in real time via the bidirectional IPC bridge.
+    5. **Conversational Operator Dialogue:** Operator enters natural language commands in the dashboard chat panel; SLM interprets intent, logs explainable rationale, and actuates corresponding simulation controls.
+    6. **Dual-Mode Execution:** Local SLM inference for interactive GUI sessions and high-speed heuristic oracle fallback for 8,000+ FPS headless Monte Carlo sweeps.
+  - **Acceptance Test:** SLM assesses novel threat waves, outputs valid JSON tactical commands, logs explainable natural language rationale to HUD/Dashboard, actuates dashboard sliders, and runs without degrading simulation FPS.
 
 ---
 
