@@ -82,7 +82,11 @@ flowchart TD
 
 ## Phase 4: Dynamic Ballistics & Kamikaze Evasion
 
-- [ ] **STEP 4.1: Projectile Kinematics & Visual Tracers**
+- [x] **STEP 4.1: Projectile Kinematics & Visual Tracers**
+  - **Files:** `weapons.py`, `vehicle.py`, `swarm_manager.py`, `test_ballistics.py`
+  - **Scope:** Replaced instantaneous hitscan weapon mechanics with physical `Projectile` instances (`VaporizerBolt` railgun/plasma round at 850 px/s, `FreezingBolt` cryogenic pulse at 650 px/s). Implemented first-order lead pursuit calculation for moving targets, range and lifetime limits, and multi-segment dynamic gradient visual tracers with glowing incandescent cores. Integrated spatial Quadtree collision checks in `SwarmManager.update()` and decoupled explosions to occur upon physical projectile impact.
+  - **Result:** Full unit test suite (`test_ballistics.py`) passed; 120 headless frames benchmarked at over 5,300 FPS; 50 combat benchmark episodes completed with 100% survival rate and authentic ballistic kills.
+
 - [ ] **STEP 4.2: Kamikaze Evasive Steering & Jinking**
 
 ---

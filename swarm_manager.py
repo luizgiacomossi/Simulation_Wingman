@@ -31,6 +31,7 @@ class SwarmManager(object):
         self.swarm: List[LoyalWingman] = []
         self.kamikazes: List[Kamikaze] = []
         self.explosions: List[Explosion_kamikaze] = []
+        self.projectiles: List[Any] = []
         self.leadingdrone: LeadingDrone = None
         self.protected_area: ProtectedArea = None
 
@@ -66,6 +67,7 @@ class SwarmManager(object):
         self.swarm = []
         self.kamikazes = []
         self.explosions = []
+        self.projectiles = []
         self.behaviors = []
 
         # Create Protected Area
@@ -92,6 +94,7 @@ class SwarmManager(object):
                 kp=kp,
                 kv=kv
             )
+            drone.projectiles_pool = self.projectiles
             self.swarm.append(drone)
 
         # Create Kamikaze Swarm
@@ -213,12 +216,37 @@ class SwarmManager(object):
             # Attack logic
             attack_status = drone.check_attack()
             if attack_status[1]:
-                self.explosions.append(Explosion_kamikaze(attack_status[0], self.window))
                 drone.update_attack_status()
+
+        # 3.5. Update In-Flight Projectiles & Ballistic Interception
+        for proj in self.projectiles:
+            proj.update(SAMPLE_TIME)
+            if not proj.alive:
+                continue
+
+            search_box = Rect(proj.position.x, proj.position.y, proj.radius + SIZE_DRONE, proj.radius + SIZE_DRONE)
+            candidate_kamikazes = quadtree_kamikazes.query(search_box)
+            if not candidate_kamikazes:
+                candidate_kamikazes = self.kamikazes
+
+            for k in candidate_kamikazes:
+                if not getattr(k, 'destroyed', False) and not getattr(k, 'explode', False):
+                    dist = (proj.position - k.location).length()
+                    if dist <= proj.radius + SIZE_DRONE:
+                        proj.on_hit(k, self)
+                        break
+
+        # Purge inactive projectiles
+        self.projectiles[:] = [p for p in self.projectiles if p.alive]
 
         # 4. Update Kamikazes
         exploded_indices = []
         for index, kamikaze in enumerate(self.kamikazes):
+            if kamikaze.get_explode_state() or getattr(kamikaze, 'destroyed', False):
+                self.explosions.append(Explosion_kamikaze(kamikaze.location, self.window))
+                exploded_indices.append(index)
+                continue
+
             kamikaze.set_leader_position(pos_leader[-1])
             kamikaze.set_quadtree_loyal(quadtree_loyal)
             kamikaze.align_swarm(quadtree_kamikazes, index)
@@ -227,7 +255,7 @@ class SwarmManager(object):
             kamikaze.check_collisions()
             kamikaze.check_protected_area()
 
-            if kamikaze.get_explode_state():
+            if kamikaze.get_explode_state() or getattr(kamikaze, 'destroyed', False):
                 self.explosions.append(Explosion_kamikaze(kamikaze.location, self.window))
                 exploded_indices.append(index)
 
@@ -317,3 +345,7 @@ class SwarmManager(object):
                 state_name = k.behavior.get_current_state()
                 img_state = display_manager.get_rendered_text(display_manager.font15, state_name, LIGHT_BLUE)
                 surface.blit(img_state, k.get_position() + (0, 30))
+
+        # Draw Projectile Tracers
+        for proj in self.projectiles:
+            proj.draw(surface, display_manager)

@@ -971,8 +971,9 @@ class LoyalWingman(Vehicle):
         self.destroyed = False
         self.error = vec2(0,0)
         self.kamikazes = None
-        self.vaporizer_gun = Vaporizer(1,10,1,100,self.kamikazes)
-        self.freezing_gun  = Freezing(1,10,1,300,self.kamikazes)
+        self.projectiles_pool = None
+        self.vaporizer_gun = Vaporizer(1, 10, 1, 100, self.kamikazes, owner=self)
+        self.freezing_gun  = Freezing(1, 10, 1, 300, self.kamikazes, owner=self)
         self.closest_kamikaze = vec2(inf,inf)
         self.distance_closest_kamikaze = inf
         self.attack_status = ( vec2(0,0) , False ) # position attacked and sucessfull or not
@@ -1019,10 +1020,6 @@ class LoyalWingman(Vehicle):
 
         self.closest_kamikaze = closest
         self.distance_closest_kamikaze = closest_distance
-        
-        # draws vaporizing gun shot
-        if closest_distance < 100 and self.window is not None:
-            pg.draw.line(self.window, (100, 0, 0), self.location, self.closest_kamikaze , 1)
 
     def arrive(self, target):
         """
@@ -1060,14 +1057,23 @@ class LoyalWingman(Vehicle):
 
     def fire_vaporizer(self, kamikaze_position):
         target = getattr(self, 'kamikaze_to_attack', self.index_closest)
-        status = self.vaporizer_gun.fire(target)
-        self.attack_status = (kamikaze_position, status)
+        bolt = self.vaporizer_gun.fire(target=target, origin=self.location)
+        if bolt is not None:
+            self.attack_status = (kamikaze_position, True)
+            if getattr(self, 'projectiles_pool', None) is not None:
+                self.projectiles_pool.append(bolt)
+        else:
+            self.attack_status = (kamikaze_position, False)
 
     def fire_freezing(self, kamikaze_position):
         target = getattr(self, 'kamikaze_to_attack', self.index_closest)
-        status = self.freezing_gun.fire(target)
-        if status and self.window is not None:
-            pg.draw.line(self.window, (0, 100, 0), self.location, self.closest_kamikaze, 3)
+        bolt = self.freezing_gun.fire(target=target, origin=self.location)
+        if bolt is not None:
+            self.attack_status = (kamikaze_position, True)
+            if getattr(self, 'projectiles_pool', None) is not None:
+                self.projectiles_pool.append(bolt)
+        else:
+            self.attack_status = (kamikaze_position, False)
 
     def check_attack(self):
         return self.attack_status
