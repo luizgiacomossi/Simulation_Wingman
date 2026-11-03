@@ -5,7 +5,7 @@ import pygame
 from constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT,
     NUM_DRONES, NUM_KAMIKAZES, DISTANCE_LEADER, RESOLUTION,
-    SIZE_DRONE, LIGHT_BLUE, TIME_EXPLOSION
+    SIZE_DRONE, LIGHT_BLUE, TIME_EXPLOSION, SAMPLE_TIME
 )
 from quadtree import Quadtree, Rect
 from vehicle import Vehicle, LoyalWingman, Kamikaze, LeadingDrone
@@ -16,6 +16,7 @@ from state_machine import (
 from decision_making import LoyalWingmanBehaviorTree
 from animation import Explosion_kamikaze, ProtectedArea
 from utils import generate_coordenates_kamikaze
+from target_allocator import TargetAllocator
 
 vec2 = pygame.math.Vector2
 
@@ -40,6 +41,8 @@ class SwarmManager(object):
         self.distance_formation = DISTANCE_LEADER
         self.distance_rings_formation = 1.2
         self.distance_chase = 306.6
+        self.target_allocator = TargetAllocator()
+        self.allocation_mode = "hungarian"
 
     def create_swarm(self, num_loyal=NUM_DRONES, num_kamikazes=NUM_KAMIKAZES,
                      distance_chase=306.6, kp=0.625, kv=4.5,
@@ -186,6 +189,18 @@ class SwarmManager(object):
         quadtree_kamikazes = Quadtree(boundary, 4)
         for k in self.kamikazes:
             quadtree_kamikazes.insert(k.location, k)
+
+        # 2.5. Cooperative Target Allocation (Hungarian Algorithm)
+        if self.allocation_mode == "hungarian" and self.target_allocator is not None:
+            base_pos = self.protected_area.coordenates if self.protected_area else None
+            leader_pos = self.leadingdrone.location if self.leadingdrone else None
+            self.target_allocator.update_cooperative_targeting(
+                wingmen=self.swarm,
+                kamikazes=self.kamikazes,
+                dt=SAMPLE_TIME,
+                base_pos=base_pos,
+                leader_pos=leader_pos
+            )
 
         # 3. Update Loyal Wingmen
         for index, drone in enumerate(self.swarm):

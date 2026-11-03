@@ -24,7 +24,7 @@ class GUIManager:
         self.minimap_width = 240
         self.minimap_height = int(240 * (WORLD_HEIGHT / WORLD_WIDTH))  # exact 1900:900 ratio ~ 114
         self.inspector_width = 300
-        self.inspector_height = 250
+        self.inspector_height = 280
         self.screen_width = 1600
         self.screen_height = 900
         self.update_layout(self.screen_width, self.screen_height)
@@ -427,7 +427,17 @@ class GUIManager:
 
         # Weapons Inventory (if Loyal Wingman)
         if self.selected_type == "Loyal Wingman":
-            y += 26
+            role = getattr(agent, 'tactical_role', 'INTERCEPTOR')
+            assigned = getattr(agent, 'assigned_threat', None)
+            target_str = "Escort Formation" if assigned is None else "Assigned Threat"
+            y += 20
+            lbl_role = self.font_small.render("Tactical Role:", True, (135, 160, 185))
+            screen.blit(lbl_role, (card_rect.x + 16, y))
+            role_col = (60, 220, 245) if role == "INTERCEPTOR" else (255, 210, 60)
+            val_role = self.font_bold.render(f"{role}", True, role_col)
+            screen.blit(val_role, (card_rect.x + 130, y))
+
+            y += 24
             pg.draw.line(screen, (35, 55, 80), (card_rect.x + 15, y - 4), (card_rect.right - 15, y - 4), 1)
 
             vap_ammo = agent.vaporizer_gun.get_ammo_available() if hasattr(agent, 'vaporizer_gun') else 0

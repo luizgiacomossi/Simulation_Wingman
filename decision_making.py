@@ -46,11 +46,27 @@ class ChaseThreatNode(LeafNode):
         self.time_executing += SAMPLE_TIME
 
         if agent.kamikazes:
-        #========== Check closest drone to the leader to attack
+            # 1. Cooperative Hungarian Assignment Check
+            assigned = getattr(agent, 'assigned_threat', None)
+            if assigned is not None and not getattr(assigned, 'explode', False):
+                dist = agent.location.distance_to(assigned.location)
+                if dist < agent.distance_chase and (agent.vaporizer_gun.available or agent.freezing_gun.available):
+                    agent.set_target(assigned.location)
+                    agent.closest_kamikaze = assigned.location
+                    agent.distance_closest_kamikaze = dist
+                    if agent.kamikazes and assigned in agent.kamikazes:
+                        agent.index_closest = agent.kamikazes.index(assigned)
+                    agent.kamikaze_to_attack = assigned
+                    return ExecutionStatus(0)
+
+            # 2. Close Escort Role: remain in defensive formation around leader
+            if getattr(agent, 'tactical_role', 'INTERCEPTOR') == 'CLOSE_ESCORT':
+                return ExecutionStatus(0)
+
+            # 3. Fallback: local greedy threat detection
             agent.check_distance_kamikazes()
             kamikaze = agent.kamikaze_to_attack 
 
-            # se kamikaze esta proximo(400) e arma disponivel ele ira perseguir
             distance_chase = agent.distance_chase 
             if agent.distance_closest_kamikaze < distance_chase and (agent.vaporizer_gun.available == True):
                 agent.set_target(agent.closest_kamikaze)
