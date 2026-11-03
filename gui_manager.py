@@ -23,26 +23,11 @@ class GUIManager:
         # UI Layout Coordinates
         self.minimap_width = 240
         self.minimap_height = int(240 * (WORLD_HEIGHT / WORLD_WIDTH))  # exact 1900:900 ratio ~ 114
-        self.minimap_rect = pg.Rect(
-            SCREEN_WIDTH - self.minimap_width - 20,
-            SCREEN_HEIGHT - self.minimap_height - 25,
-            self.minimap_width,
-            self.minimap_height
-        )
-
         self.inspector_width = 300
         self.inspector_height = 250
-        self.inspector_rect = pg.Rect(
-            SCREEN_WIDTH - self.inspector_width - 20,
-            20,
-            self.inspector_width,
-            self.inspector_height
-        )
-        self.inspector_close_rect = pg.Rect(
-            self.inspector_rect.right - 26,
-            self.inspector_rect.top + 8,
-            18, 18
-        )
+        self.screen_width = 1600
+        self.screen_height = 900
+        self.update_layout(self.screen_width, self.screen_height)
 
         # Fonts (cached)
         pg.font.init()
@@ -55,6 +40,28 @@ class GUIManager:
         # Reusable translucent surfaces
         self._surf_card = None
         self._surf_minimap = None
+
+    def update_layout(self, screen_w, screen_h):
+        """Updates responsive layout bounds to match the current screen/window dimensions."""
+        self.screen_width = screen_w
+        self.screen_height = screen_h
+        self.minimap_rect = pg.Rect(
+            screen_w - self.minimap_width - 20,
+            screen_h - self.minimap_height - 25,
+            self.minimap_width,
+            self.minimap_height
+        )
+        self.inspector_rect = pg.Rect(
+            screen_w - self.inspector_width - 20,
+            20,
+            self.inspector_width,
+            self.inspector_height
+        )
+        self.inspector_close_rect = pg.Rect(
+            self.inspector_rect.right - 26,
+            self.inspector_rect.top + 8,
+            18, 18
+        )
 
     def update(self):
         """Updates animation pulses."""
@@ -72,6 +79,9 @@ class GUIManager:
         Handles mouse clicks and shortcut keys for GUI and Agent Inspector.
         Returns True if the event was consumed by the GUI.
         """
+        if hasattr(display_manager, 'screen_width') and hasattr(display_manager, 'screen_height'):
+            if display_manager.screen_width != self.screen_width or display_manager.screen_height != self.screen_height:
+                self.update_layout(display_manager.screen_width, display_manager.screen_height)
         if event.type == pg.KEYDOWN:
             if event.key == pg.K_h:
                 self.visible = not self.visible
@@ -193,6 +203,10 @@ class GUIManager:
             tip = self.font_small.render("Press [H] to Show HUD", True, (150, 170, 190))
             screen.blit(tip, (15, 15))
             return
+
+        sw, sh = screen.get_size()
+        if sw != self.screen_width or sh != self.screen_height:
+            self.update_layout(sw, sh)
 
         self.update()
 
@@ -338,8 +352,8 @@ class GUIManager:
         offset = display_manager.offset
         cam_wx = -offset.x / zoom
         cam_wy = -offset.y / zoom
-        cam_ww = SCREEN_WIDTH / zoom
-        cam_wh = SCREEN_HEIGHT / zoom
+        cam_ww = display_manager.screen_width / zoom
+        cam_wh = display_manager.screen_height / zoom
 
         f_rx = self.minimap_rect.x + int(cam_wx * sx)
         f_ry = self.minimap_rect.y + int(cam_wy * sy)
@@ -458,8 +472,8 @@ class GUIManager:
 
         bar_h = 28
         bar_w = 780
-        bar_x = (SCREEN_WIDTH - bar_w) // 2
-        bar_y = SCREEN_HEIGHT - bar_h - 10
+        bar_x = (self.screen_width - bar_w) // 2
+        bar_y = self.screen_height - bar_h - 10
 
         pill_rect = pg.Rect(bar_x, bar_y, bar_w, bar_h)
         self._draw_glass_panel(screen, pill_rect, border_color=(40, 65, 95, 180), bg_color=(12, 17, 26, 210), radius=14)

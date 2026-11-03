@@ -1,11 +1,29 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
-# Simulation Parameters
-SCREEN_WIDTH = 1900
-SCREEN_HEIGHT = 900
+# World Physics Parameters (fixed bounding box for simulation logic)
 WORLD_WIDTH = 1900
 WORLD_HEIGHT = 900
+
+# Screen / Window Parameters (auto-detected from laptop display)
+def get_auto_screen_resolution(margin_w=70, margin_h=100):
+    """Detects current laptop/desktop screen resolution and returns optimal window size."""
+    try:
+        import pygame
+        if not pygame.get_init():
+            pygame.init()
+        if not pygame.display.get_init():
+            pygame.display.init()
+        info = pygame.display.Info()
+        if info.current_w > 0 and info.current_h > 0:
+            w = max(800, int(info.current_w - margin_w))
+            h = max(550, int(info.current_h - margin_h))
+            return w, h
+    except Exception:
+        pass
+    return 1600, 900
+
+SCREEN_WIDTH, SCREEN_HEIGHT = get_auto_screen_resolution()
 PIX2M = 0.01  # factor to convert from pixels to meters
 M2PIX = 100.0  # factor to convert from meters to pixels
 NUM_DRONES = 10# Number of simultaneous drones

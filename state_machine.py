@@ -153,7 +153,7 @@ class StayAtState(State):
         try:
             self.target
         except:
-            self.target = vec2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2) 
+            self.target = vec2(WORLD_WIDTH/2, WORLD_HEIGHT/2) 
 
         self.time_executing += 1
         # defines target 
@@ -168,7 +168,7 @@ class OvalState(State):
         self.state_name = 'Oval'
         self.theta = 0 #Variavel para contagem do angulo atual  
         print('OvalState')
-        self.target = vec2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
+        self.target = vec2(WORLD_WIDTH/2, WORLD_HEIGHT/2)
         self.sequence = 0
         self.finished = False
 
@@ -243,7 +243,7 @@ class Eight2State(State):
         # Todo: add initialization code
         self.theta = 0 #Variavel para contagem do angulo atual  
         print('EightState2')
-        self.target = vec2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
+        self.target = vec2(WORLD_WIDTH/2, WORLD_HEIGHT/2)
         self.sequence = 0
         self.finished = 0 
 
@@ -415,7 +415,7 @@ class EightState(State):
         self.state_name = 'Eight'
         self.theta = 0 #Variavel para contagem do tempo de execução 
         print('Eight')
-        self.target = vec2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
+        self.target = vec2(WORLD_WIDTH/2, WORLD_HEIGHT/2)
         self.c = 0
 
     def check_transition(self, agent, state_machine):
@@ -453,7 +453,7 @@ class RandomWalkState(State):
         self.time_executing = 0 #Variavel para contagem do tempo de execução 
         #print('Random')
         self.finished = False
-        self.target = vec2(random.uniform(0,SCREEN_WIDTH),random.uniform(0,SCREEN_HEIGHT))
+        self.target = vec2(random.uniform(0,WORLD_WIDTH),random.uniform(0,WORLD_HEIGHT))
 
     def check_transition(self, agent, state_machine):
         # Todo: add logic to check and execute state transition

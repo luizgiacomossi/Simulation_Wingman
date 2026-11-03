@@ -4,20 +4,35 @@ from constants import SCREEN_WIDTH, SCREEN_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, LI
 class DisplayManager(object):
     """
     Manages display rendering, surfaces, zoom and pan camera mechanics.
+    Automatically detects laptop screen resolution and supports dynamic resizing.
     """
-    def __init__(self, screen_width=SCREEN_WIDTH, screen_height=SCREEN_HEIGHT,
+    def __init__(self, screen_width=None, screen_height=None,
                  world_width=WORLD_WIDTH, world_height=WORLD_HEIGHT):
         pygame.init()
+        if not pygame.display.get_init():
+            pygame.display.init()
+
         self.font15 = pygame.font.SysFont(None, 15)
         self.font20 = pygame.font.SysFont(None, 20)
         self.font24 = pygame.font.SysFont(None, 24)
 
-        self.screen_width = screen_width
-        self.screen_height = screen_height
         self.world_width = world_width
         self.world_height = world_height
 
-        self.size = (screen_width, screen_height)
+        # Automatically match laptop screen resolution
+        if screen_width is None or screen_height is None:
+            info = pygame.display.Info()
+            if info.current_w > 0 and info.current_h > 0:
+                self.screen_width = max(800, info.current_w - 70)
+                self.screen_height = max(550, info.current_h - 100)
+            else:
+                self.screen_width = SCREEN_WIDTH
+                self.screen_height = SCREEN_HEIGHT
+        else:
+            self.screen_width = screen_width
+            self.screen_height = screen_height
+
+        self.size = (self.screen_width, self.screen_height)
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode(self.size, pygame.RESIZABLE | pygame.SRCALPHA)
         pygame.display.set_caption("Loyal Wingman MUM-T Air Defense Simulator")
@@ -25,10 +40,14 @@ class DisplayManager(object):
         # World surface on which the entire simulation is drawn before viewport scaling
         self.world_surface = pygame.Surface((self.world_width, self.world_height), depth=24)
 
-        # Camera zoom and pan state
-        self.zoom_level = 1.0
-        self.offset = pygame.math.Vector2(0, 0)
-        self.min_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height) * 0.5
+        # Responsive zoom to comfortably fit world inside the laptop window
+        fit_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height)
+        self.zoom_level = min(1.0, fit_zoom)
+        self.offset = pygame.math.Vector2(
+            (self.screen_width - self.world_width * self.zoom_level) / 2,
+            (self.screen_height - self.world_height * self.zoom_level) / 2
+        )
+        self.min_zoom = fit_zoom * 0.4
         self.max_zoom = 4.0
 
         # Panning state
@@ -50,6 +69,11 @@ class DisplayManager(object):
         """
         Processes camera interaction events (mouse wheel zoom, middle click pan).
         """
+        # Window Resize
+        if event.type == pygame.VIDEORESIZE:
+            self.resize_display(event.w, event.h)
+            return
+
         # Mouse Wheel Zoom
         if event.type == pygame.MOUSEWHEEL:
             old_zoom = self.zoom_level
@@ -100,10 +124,24 @@ class DisplayManager(object):
         self.offset.y = self.screen_height / 2 - world_pos.y * self.zoom_level
         self.clamp_offset()
 
+    def resize_display(self, new_w, new_h):
+        """Dynamically resizes screen and recalculates bounds when window is resized."""
+        self.screen_width = max(640, new_w)
+        self.screen_height = max(480, new_h)
+        self.size = (self.screen_width, self.screen_height)
+        self.screen = pygame.display.set_mode(self.size, pygame.RESIZABLE | pygame.SRCALPHA)
+        fit_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height)
+        self.min_zoom = fit_zoom * 0.4
+        self.clamp_offset()
+
     def reset_view(self):
-        """Resets camera to default 1.0 zoom centered."""
-        self.zoom_level = 1.0
-        self.offset = pygame.math.Vector2(0, 0)
+        """Resets camera to fit the laptop screen comfortably."""
+        fit_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height)
+        self.zoom_level = min(1.0, fit_zoom)
+        self.offset = pygame.math.Vector2(
+            (self.screen_width - self.world_width * self.zoom_level) / 2,
+            (self.screen_height - self.world_height * self.zoom_level) / 2
+        )
         self.clamp_offset()
 
     def screen_to_world(self, screen_pos):
@@ -135,7 +173,7 @@ class DisplayManager(object):
         offset = self.offset
 
         # Fast path: 1.0x unshifted zoom avoids expensive transform.scale on 1.7M pixels
-        if abs(zoom - 1.0) < 0.001 and abs(offset.x) < 0.001 and abs(offset.y) < 0.001:
+        if abs(zoom - 1.0) < 0.001 and abs(offset.x) < 0.001 and abs(offset.y) < 0.001 and self.screen_width == self.world_width and self.screen_height == self.world_height:
             self.screen.blit(self.world_surface, (0, 0))
             return
 

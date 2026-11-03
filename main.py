@@ -82,7 +82,7 @@ def main():
 
     # Generates obstacles
     list_obst = []
-    obst = Obstacles(NUM_OBSTACLES, (SCREEN_WIDTH,SCREEN_HEIGHT))
+    obst = Obstacles(NUM_OBSTACLES, (WORLD_WIDTH, WORLD_HEIGHT))
     obst.generate_obstacles()
     # To generate obstacles, uncomment following command
     #list_obst = obst.get_coordenates()

@@ -78,8 +78,8 @@ class Vehicle(object):
         #self.rotation = atan2(self.velocity.y,self.velocity.x) 
         k = 2/3
         self.rotation =  (atan2(self.velocity.y,self.velocity.x) - self.rotation)*k + self.rotation
-        # Constrains position to limits of screen 
-        self.location = constrain(self.location,SCREEN_WIDTH,SCREEN_HEIGHT)
+        # Constrains position to limits of world 
+        self.location = constrain(self.location,WORLD_WIDTH,WORLD_HEIGHT)
         self.acceleration *= 0
 
         # Memory of positions to draw Track
@@ -451,8 +451,8 @@ class VehiclePF(object):
         # Prevents it from crazy spinning due to very low noise speeds
         if self.velocity.length() > 0.8:
             self.rotation = atan2(self.velocity.y,self.velocity.x)
-        # Constrains position to limits of screen 
-        self.location = constrain(self.location,SCREEN_WIDTH,SCREEN_HEIGHT)
+        # Constrains position to limits of world 
+        self.location = constrain(self.location,WORLD_WIDTH,WORLD_HEIGHT)
         self.acceleration *= 0
 
         # Memory of positions to draw Track
@@ -1155,8 +1155,8 @@ class Kamikaze(Vehicle):
         #self.rotation = atan2(self.velocity.y,self.velocity.x) 
         k = 2/3
         self.rotation =  (atan2(self.velocity.y,self.velocity.x) - self.rotation)*k + self.rotation
-        # Constrains position to limits of screen 
-        self.location = constrain(self.location,SCREEN_WIDTH,SCREEN_HEIGHT)
+        # Constrains position to limits of world 
+        self.location = constrain(self.location,WORLD_WIDTH,WORLD_HEIGHT)
         self.acceleration *= 0
 
         # Memory of positions to draw Track

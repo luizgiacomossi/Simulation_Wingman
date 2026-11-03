@@ -1,4 +1,4 @@
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT, PIX2M, M2PIX,SIZE_DRONE, RED
+from constants import SCREEN_WIDTH, SCREEN_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, PIX2M, M2PIX,SIZE_DRONE, RED
 import pygame as pg
 from math import atan2, pi, exp
 import random
@@ -144,13 +144,13 @@ def generate_coordenates_kamikaze():
 
     if alpha_random < 0.33:
             # x = 0 y = random
-        position = vec(0, random.uniform(0,SCREEN_HEIGHT))
+        position = vec(0, random.uniform(0,WORLD_HEIGHT))
     elif alpha_random >= 0.33 and alpha_random < 0.66:
             # x = random y = 0
-        position = vec(random.uniform(0,SCREEN_WIDTH/3), 0)
+        position = vec(random.uniform(0,WORLD_WIDTH/3), 0)
     else: 
-            # y = SCREEN_HEIGHT x = ramdom
-        position = vec(random.uniform(0,SCREEN_WIDTH/3), SCREEN_HEIGHT)
+            # y = WORLD_HEIGHT x = ramdom
+        position = vec(random.uniform(0,WORLD_WIDTH/3), WORLD_HEIGHT)
 
 
     return position
