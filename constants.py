@@ -1,3 +1,6 @@
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+
 # Simulation Parameters
 SCREEN_WIDTH = 1900
 SCREEN_HEIGHT = 900

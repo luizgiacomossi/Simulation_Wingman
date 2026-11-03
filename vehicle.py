@@ -53,9 +53,13 @@ class Vehicle(object):
         self.count = 0
 
         # Variables to draw drone using Sprites
-        self.drone = Aircraft() 
-        self.all_sprites = pg.sprite.Group()
-        self.all_sprites.add(self.drone)
+        if self.window is not None:
+            self.drone = Aircraft() 
+            self.all_sprites = pg.sprite.Group()
+            self.all_sprites.add(self.drone)
+        else:
+            self.drone = None
+            self.all_sprites = None
     
     def update(self):
         """
@@ -108,7 +112,8 @@ class Vehicle(object):
         # Applies steering force to drone
         self.applyForce(steer)
         # Draws current target being seeked 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
     
     def arrive_new_dynamic(self, target_leader):
         """
@@ -129,7 +134,8 @@ class Vehicle(object):
         accelerate = limit(f_attract, self.max_force)
         self.applyForce(accelerate)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
     def arrive(self, target):
         """
@@ -164,7 +170,8 @@ class Vehicle(object):
         #self.applyForce(wind)
 
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
     def stay_at(self, center, r = RADIUS_TARGET):
         """
@@ -323,26 +330,28 @@ class Vehicle(object):
             steer = limit(steer,self.max_force)
             self.applyForce(steer)
                   
-    def draw(self, window):
-
+    def draw(self, window=None):
         """
             Defines shape of vehicle and draw it to screen
         """
+        target_win = window if window is not None else self.window
+        if target_win is None:
+            return
 
         # draws track
         if len(self.memory_location) >= 2:
-            pg.draw.lines(self.window, self.color_target, False, self.memory_location, 1)
+            pg.draw.lines(target_win, self.color_target, False, self.memory_location, 1)
         # Drawing drone's outer circle as a hitbox?
         if self.debug == True:
-            pg.draw.circle(self.window, (100, 100, 100), self.location, AVOID_DISTANCE, 1)
-            #pg.draw.line(self.window, (100, 100, 100), self.location, self.location+self.desired , 1)
-            # Draw Direction
+            pg.draw.circle(target_win, (100, 100, 100), self.location, AVOID_DISTANCE, 1)
             v = self.velocity.length()
-            pg.draw.line(self.window, (255, 0, 0), self.location, self.location + self.velocity.normalize()*v*20 , 1)
+            if v > 0:
+                pg.draw.line(target_win, (255, 0, 0), self.location, self.location + self.velocity.normalize()*v*20 , 1)
 
         # usar sprite para desenhar drone
-        self.all_sprites.draw(self.window)
-        self.all_sprites.update(self.location,self.rotation)
+        if self.all_sprites is not None:
+            self.all_sprites.draw(target_win)
+            self.all_sprites.update(self.location,self.rotation)
 
     def collision_avoidance(self, positions_drones , pos_obstacles , index):
         """
@@ -419,9 +428,13 @@ class VehiclePF(object):
         self.count = 0
 
         # Variables to draw drone using Sprites
-        self.drone = Aircraft() 
-        self.all_sprites = pg.sprite.Group()
-        self.all_sprites.add(self.drone)
+        if self.window is not None:
+            self.drone = Aircraft() 
+            self.all_sprites = pg.sprite.Group()
+            self.all_sprites.add(self.drone)
+        else:
+            self.drone = None
+            self.all_sprites = None
     
     def update(self):
         """
@@ -472,7 +485,8 @@ class VehiclePF(object):
         # Applies steering force to drone
         self.applyForce(steer)
         # Draws current target being seeked 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
     
     def arrive(self, target):
         """
@@ -499,7 +513,8 @@ class VehiclePF(object):
         accelerate = limit(error, self.max_force)
         self.applyForce(accelerate)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
        
     def arrive_old(self, target):
         """
@@ -533,7 +548,8 @@ class VehiclePF(object):
         wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
         self.applyForce(wind)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
     
     def stay_at(self, center, r = RADIUS_TARGET):
         """
@@ -766,7 +782,8 @@ class LeadingDrone(Vehicle):
         accelerate = limit(error, self.max_force)
         self.applyForce(accelerate)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
     def arrive(self, target):
         """
@@ -800,7 +817,8 @@ class LeadingDrone(Vehicle):
         #wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
         #self.applyForce(wind)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
     def set_formation(self, num_drones = NUM_DRONES):
         '''
@@ -995,7 +1013,7 @@ class LoyalWingman(Vehicle):
         self.distance_closest_kamikaze = closest_distance
         
         # draws vaporizing gun shot
-        if closest_distance < 100:
+        if closest_distance < 100 and self.window is not None:
             pg.draw.line(self.window, (100, 0, 0), self.location, self.closest_kamikaze , 1)
 
     def arrive(self, target):
@@ -1023,7 +1041,8 @@ class LoyalWingman(Vehicle):
         #wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
         #self.applyForce(wind)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
     def collision_avoidance_leader(self, pos_leader):
         """
@@ -1057,7 +1076,7 @@ class LoyalWingman(Vehicle):
             status = self.vaporizer_gun.fire(self.index_closest)
             self.attack_status = (  kamikaze_position, status )
         except:
-            print('All kamikazes were destroyed')
+            pass
 
     def fire_freezing(self, kamikaze_position):
         # check distanceß
@@ -1066,11 +1085,11 @@ class LoyalWingman(Vehicle):
             # check if attack was successful or not
             status = self.freezing_gun.fire(self.index_closest)
             # draws freezing gun shot if executed
-            if status:
+            if status and self.window is not None:
                 pg.draw.line(self.window, (0, 100, 0), self.location, self.closest_kamikaze , 3)
 
         except:
-            print('All kamikazes were destroyed')
+            pass
 
     def check_attack(self):
         return self.attack_status
@@ -1091,9 +1110,13 @@ class Kamikaze(Vehicle):
         super().__init__(x, y, behavior, window)
 
         # Variables to draw drone using Sprites
-        self.drone = Kamikaze_drone() 
-        self.all_sprites = pg.sprite.Group()
-        self.all_sprites.add(self.drone)
+        if self.window is not None:
+            self.drone = Kamikaze_drone() 
+            self.all_sprites = pg.sprite.Group()
+            self.all_sprites.add(self.drone)
+        else:
+            self.drone = None
+            self.all_sprites = None
         self.loyalwingmen = LoyalWingmen
         self.closest_loyal = self.get_position()
         self.explode = False
@@ -1248,7 +1271,8 @@ class Kamikaze(Vehicle):
         #wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
         #self.applyForce(wind)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        if self.window is not None:
+            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
 
     def get_leader_position(self):
         return self.leader_loyal.location

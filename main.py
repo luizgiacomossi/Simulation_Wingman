@@ -47,174 +47,194 @@ hyperparams.social_parameter = 0.8
 lower_bound = np.array([10  ,  0 , 0])
 upper_bound = np.array([1000, 300, 4])
 
-# Particle Swarm Optimization
-pso = ParticleSwarmOptimization(hyperparams, lower_bound, upper_bound)
-# Number of function evaluations will be 1000 times the number of particles,
-# i.e. PSO will be executed by 100 generations
-num_evaluations = 100 * hyperparams.num_particles
-# Initializing history
-position_history = []  # history of evaluated particle positions
-quality_history = []  # history of evaluated qualities
+def main():
+    # Particle Swarm Optimization
+    pso = ParticleSwarmOptimization(hyperparams, lower_bound, upper_bound)
+    # Number of function evaluations will be 1000 times the number of particles,
+    # i.e. PSO will be executed by 100 generations
+    num_evaluations = 100 * hyperparams.num_particles
+    # Initializing history
+    position_history = []  # history of evaluated particle positions
+    quality_history = []  # history of evaluated qualities
 
-# Getting the first parameters to evaluate
-position = pso.get_position_to_evaluate()
-simulation_params = convert_particle_position_to_params(position)
-running_PSO = False
-##=================================================================================================
-screenSimulation = ScreenSimulation()
+    # Getting the first parameters to evaluate
+    position = pso.get_position_to_evaluate()
+    simulation_params = convert_particle_position_to_params(position)
+    running_PSO = False
 
-# Generates obstacles
-list_obst = []
-obst = Obstacles(NUM_OBSTACLES, (SCREEN_WIDTH,SCREEN_HEIGHT))
-obst.generate_obstacles()
-# To generate obstacles, uncomment following command
-#list_obst = obst.get_coordenates()
+    # Check for Headless Parallel PSO mode
+    if "--pso-parallel" in sys.argv or "--headless-pso" in sys.argv:
+        import argparse
+        from headless_runner import ParallelPSOOptimizer
+        parser = argparse.ArgumentParser(description="Loyal Wingman Headless Parallel Optimization")
+        parser.add_argument("--pso-parallel", action="store_true", help="Run parallel PSO optimization")
+        parser.add_argument("--headless-pso", action="store_true", help="Run parallel PSO optimization")
+        parser.add_argument("--generations", type=int, default=20, help="Number of PSO generations")
+        parser.add_argument("--workers", type=int, default=None, help="Number of CPU worker processes (defaults to all cores)")
+        args, _ = parser.parse_known_args()
 
-#grid
-#grid_field = GridField(RESOLUTION)
-#grid_field.draw(screen)
+        optimizer = ParallelPSOOptimizer(pso, max_workers=args.workers)
+        optimizer.optimize(generations=args.generations)
+        sys.exit(0)
 
-simulation = Simulation(screenSimulation)
-# para testar o pso, depois retirar esse comentario !!!!!!
-if running_PSO:
-    simulation.create_swarm_uav(NUM_DRONES,
-                                NUM_KAMIKAZES,
-                                simulation_params.distance_chase,
-                                #300.7,
-                                #kp=29.85,
-                                #kv=37.31,
-                                #distance_formation = DISTANCE_LEADER)
-                                #distance_formation = 69.02)
-                                distance_formation = simulation_params.formation_distance)
-                                #distance_rings_formation = simulation_params.distance_rings_formation)
-else:
-    simulation.create_swarm_uav(NUM_DRONES, 
-                                NUM_KAMIKAZES, 
-                                #distance_chase = 352, parameter using optimization
-                                distance_chase = 306.6,
-                                distance_formation = 100.1)
-                                #distance_formation = 62,
-                                #distance_rings_formation = 2.37)
-# 306.57304199 100.1527203  # com 1 ring e distancias de engajamento e do lider
+    ##=================================================================================================
+    screenSimulation = ScreenSimulation()
 
-history = Rate_Simulation()
+    # Generates obstacles
+    list_obst = []
+    obst = Obstacles(NUM_OBSTACLES, (SCREEN_WIDTH,SCREEN_HEIGHT))
+    obst.generate_obstacles()
+    # To generate obstacles, uncomment following command
+    #list_obst = obst.get_coordenates()
 
-# Creates Leading Drone 
-avoid_list =[]
+    #grid
+    #grid_field = GridField(RESOLUTION)
+    #grid_field.draw(screen)
 
-run = True
-accelerated_factor = 1
-time_running = 0
+    simulation = Simulation(screenSimulation)
+    # para testar o pso, depois retirar esse comentario !!!!!!
+    if running_PSO:
+        simulation.create_swarm_uav(NUM_DRONES,
+                                    NUM_KAMIKAZES,
+                                    simulation_params.distance_chase,
+                                    #300.7,
+                                    #kp=29.85,
+                                    #kv=37.31,
+                                    #distance_formation = DISTANCE_LEADER)
+                                    #distance_formation = 69.02)
+                                    distance_formation = simulation_params.formation_distance)
+                                    #distance_rings_formation = simulation_params.distance_rings_formation)
+    else:
+        simulation.create_swarm_uav(NUM_DRONES, 
+                                    NUM_KAMIKAZES, 
+                                    #distance_chase = 352, parameter using optimization
+                                    distance_chase = 306.6,
+                                    distance_formation = 100.1)
+                                    #distance_formation = 62,
+                                    #distance_rings_formation = 2.37)
+    # 306.57304199 100.1527203  # com 1 ring e distancias de engajamento e do lider
 
-# Input Processor
-input_processor = ProcessorUserInput(simulation,history)
+    history = Rate_Simulation()
 
-while run:
-    # Draws at every dt
-    if simulation.accelerated_factor>0:
-        time_running += SAMPLE_TIME*simulation.accelerated_factor
+    # Creates Leading Drone 
+    avoid_list =[]
 
-    screenSimulation.clock.tick(FREQUENCY)
+    run = True
+    accelerated_factor = 1
+    time_running = 0
 
-    # Process user input - Pygame Events 
-    input_processor.read()
-    # Draw scenario
-    simulation.update_background()
-    # updates and draws all simulated UAVs  
-    simulation.run_simulation(avoid_list,list_obst, simulation.accelerated_factor)
-    # draw obstacles 
-    canvas = getattr(screenSimulation, 'world_surface', screenSimulation.screen)
-    for _ in list_obst:
-        pygame.draw.circle(canvas,(200, 250, 200), _ , radius=RADIUS_OBSTACLES, width = 2)
-        pygame.draw.circle(canvas,(200, 250, 200), _ , radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width = 2)
-        obst.all_sprites.draw(canvas)
-        obst.all_sprites.update(_,0)
-    
-    # Render world surface to display screen with camera zoom and pan
-    if hasattr(screenSimulation, 'render_to_screen'):
-        screenSimulation.render_to_screen()
+    # Input Processor
+    input_processor = ProcessorUserInput(simulation,history)
 
-    # Writes the App name in screen
-    screenSimulation.WriteLegendOnCanvas(simulation, simulation.accelerated_factor, time_running, history)
+    while run:
+        # Draws at every dt
+        if simulation.accelerated_factor>0:
+            time_running += SAMPLE_TIME*simulation.accelerated_factor
 
-    # Reset simulation if finished
-    if simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True or len(simulation.kamikazes) == 0 or simulation.protected_area.is_active() == False: 
+        screenSimulation.clock.tick(FREQUENCY)
+
+        # Process user input - Pygame Events 
+        input_processor.read()
+        # Draw scenario
+        simulation.update_background()
+        # updates and draws all simulated UAVs  
+        simulation.run_simulation(avoid_list,list_obst, simulation.accelerated_factor)
+        # draw obstacles 
+        canvas = getattr(screenSimulation, 'world_surface', screenSimulation.screen)
+        for _ in list_obst:
+            pygame.draw.circle(canvas,(200, 250, 200), _ , radius=RADIUS_OBSTACLES, width = 2)
+            pygame.draw.circle(canvas,(200, 250, 200), _ , radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width = 2)
+            obst.all_sprites.draw(canvas)
+            obst.all_sprites.update(_,0)
         
-        enemies_destroyed = simulation.get_kamikazes_destroyed()
-        # Determine end condition
-        if simulation.leadingdrone.destroyed:
-            end_reason = "Leader Destroyed"
-        elif not simulation.protected_area.is_active():
-            end_reason = "Protected Area Destroyed"
-        elif simulation.get_number_running_simultations() < 1:
-            end_reason = "All Loyal Destroyed"
-        elif len(simulation.kamikazes) == 0:
-            end_reason = "All Kamikazes Destroyed"
-        else:
-            end_reason = "Completed"
+        # Render world surface to display screen with camera zoom and pan
+        if hasattr(screenSimulation, 'render_to_screen'):
+            screenSimulation.render_to_screen()
 
-        # ====== PSO & Telemetry =======
-        quality = history.evaluate(enemies_destroyed, time_running, simulation.get_number_running_simultations())
-        current_chase = simulation_params.distance_chase if running_PSO else 306.6
-        current_formation = simulation_params.formation_distance if running_PSO else 100.1
+        # Writes the App name in screen
+        screenSimulation.WriteLegendOnCanvas(simulation, simulation.accelerated_factor, time_running, history)
 
-        # Save data to experiment history and CSV
-        history.record_iteration(
-            enemies_destroyed=enemies_destroyed,
-            time_elapsed=time_running,
-            loyal_wingman_survived=simulation.get_number_running_simultations(),
-            quality=quality,
-            leader_alive=not simulation.leadingdrone.destroyed,
-            protected_area_life=simulation.protected_area.life,
-            end_reason=end_reason,
-            distance_chase=current_chase,
-            distance_formation=current_formation
-        )
+        # Reset simulation if finished
+        if simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True or len(simulation.kamikazes) == 0 or simulation.protected_area.is_active() == False: 
+            
+            enemies_destroyed = simulation.get_kamikazes_destroyed()
+            # Determine end condition
+            if simulation.leadingdrone.destroyed:
+                end_reason = "Leader Destroyed"
+            elif not simulation.protected_area.is_active():
+                end_reason = "Protected Area Destroyed"
+            elif simulation.get_number_running_simultations() < 1:
+                end_reason = "All Loyal Destroyed"
+            elif len(simulation.kamikazes) == 0:
+                end_reason = "All Kamikazes Destroyed"
+            else:
+                end_reason = "Completed"
 
-        # Prints the results of the current training iteration
-        print(f'Iter: {history.iterations} | Quality: {quality:.2f} | Reason: {end_reason} | Enemies Destroyed: {enemies_destroyed}')
-        # Append this iteration to the optimization history
-        position_history.append(np.array(position))
-        quality_history.append(quality)
-        # Update the optimization algorithm
-        pso.notify_evaluation(quality)
-        position = pso.get_position_to_evaluate()
-        simulation_params = convert_particle_position_to_params(position)
-        print(f'Params for iteration: {simulation_params.distance_chase} Distance from leader: {simulation_params.formation_distance}, distance_rings_formation: {simulation_params.distance_rings_formation}')
-        # ==================
+            # ====== PSO & Telemetry =======
+            quality = history.evaluate(enemies_destroyed, time_running, simulation.get_number_running_simultations())
+            current_chase = simulation_params.distance_chase if running_PSO else 306.6
+            current_formation = simulation_params.formation_distance if running_PSO else 100.1
 
-        # generates new iteration
-        accelerated_factor = simulation.accelerated_factor
-        simulation = Simulation(screenSimulation)
-        if running_PSO:
-            simulation.create_swarm_uav(NUM_DRONES,
-                                        NUM_KAMIKAZES,
-                                        simulation_params.distance_chase,
-                                        #300.7,
-                                        #kp=29.85,
-                                        #kv=37.31,
-                                        #distance_formation = DISTANCE_LEADER)
-                                        #distance_formation = 69.02)
-                                        distance_formation = simulation_params.formation_distance)
-                                        #distance_rings_formation = simulation_params.distance_rings_formation)
-        else:
-            print('Running PSO OFF')
-            simulation.create_swarm_uav(NUM_DRONES, 
-                                        NUM_KAMIKAZES, 
-                                        #distance_chase = 352, parameter using optimization
-                                        distance_chase = 306.6,
-                                        distance_formation = 100.1)
-                                        #distance_formation = 62,
-                                       #distance_rings_formation = 2.37)
-        # 306.57304199 100.1527203  # com 1 ring e distancias de engajamento e do lider
-        # 352.4 62 2.37  # com 2 ring e distancias de engajamento e do lider
+            # Save data to experiment history and CSV
+            history.record_iteration(
+                enemies_destroyed=enemies_destroyed,
+                time_elapsed=time_running,
+                loyal_wingman_survived=simulation.get_number_running_simultations(),
+                quality=quality,
+                leader_alive=not simulation.leadingdrone.destroyed,
+                protected_area_life=simulation.protected_area.life,
+                end_reason=end_reason,
+                distance_chase=current_chase,
+                distance_formation=current_formation
+            )
 
-        simulation.accelerated_factor = accelerated_factor
-        input_processor = ProcessorUserInput(simulation,history)
+            # Prints the results of the current training iteration
+            print(f'Iter: {history.iterations} | Quality: {quality:.2f} | Reason: {end_reason} | Enemies Destroyed: {enemies_destroyed}')
+            # Append this iteration to the optimization history
+            position_history.append(np.array(position))
+            quality_history.append(quality)
+            # Update the optimization algorithm
+            pso.notify_evaluation(quality)
+            position = pso.get_position_to_evaluate()
+            simulation_params = convert_particle_position_to_params(position)
+            print(f'Params for iteration: {simulation_params.distance_chase} Distance from leader: {simulation_params.formation_distance}, distance_rings_formation: {simulation_params.distance_rings_formation}')
+            # ==================
 
-        # reset timer
-        time_running = 0
-        #pygame.time.wait(1000)
+            # generates new iteration
+            accelerated_factor = simulation.accelerated_factor
+            simulation = Simulation(screenSimulation)
+            if running_PSO:
+                simulation.create_swarm_uav(NUM_DRONES,
+                                            NUM_KAMIKAZES,
+                                            simulation_params.distance_chase,
+                                            #300.7,
+                                            #kp=29.85,
+                                            #kv=37.31,
+                                            #distance_formation = DISTANCE_LEADER)
+                                            #distance_formation = 69.02)
+                                            distance_formation = simulation_params.formation_distance)
+                                            #distance_rings_formation = simulation_params.distance_rings_formation)
+            else:
+                print('Running PSO OFF')
+                simulation.create_swarm_uav(NUM_DRONES, 
+                                            NUM_KAMIKAZES, 
+                                            #distance_chase = 352, parameter using optimization
+                                            distance_chase = 306.6,
+                                            distance_formation = 100.1)
+                                            #distance_formation = 62,
+                                           #distance_rings_formation = 2.37)
+            # 306.57304199 100.1527203  # com 1 ring e distancias de engajamento e do lider
+            # 352.4 62 2.37  # com 2 ring e distancias de engajamento e do lider
 
-    pygame.display.flip() 
+            simulation.accelerated_factor = accelerated_factor
+            input_processor = ProcessorUserInput(simulation,history)
+
+            # reset timer
+            time_running = 0
+            #pygame.time.wait(1000)
+
+        pygame.display.flip() 
+
+if __name__ == '__main__':
+    main() 
 

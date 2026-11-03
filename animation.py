@@ -7,15 +7,18 @@ import numpy as np
 vec = pg.math.Vector2 
 
 class Explosion_kamikaze(object):
-    def __init__(self, position, window):
+    def __init__(self, position, window=None):
         super().__init__()
-        self.explosion_animation =  Explosion(position)
-        self.all_sprites = pg.sprite.Group()
-        self.all_sprites.add(self.explosion_animation)
         self.window = window
         self.timer = 0
         self.position = position
         self.delete_explosion = False
+        if self.window is not None:
+            self.explosion_animation = Explosion(position)
+            self.all_sprites = pg.sprite.Group()
+            self.all_sprites.add(self.explosion_animation)
+        else:
+            self.all_sprites = None
 
     def count(self):
         self.timer += SAMPLE_TIME
@@ -24,9 +27,9 @@ class Explosion_kamikaze(object):
     
     def draw(self):
         self.count()
-        # usar sprite para desenhar drone
-        self.all_sprites.draw(self.window)
-        self.all_sprites.update(self.position, 0)
+        if self.window is not None and self.all_sprites is not None:
+            self.all_sprites.draw(self.window)
+            self.all_sprites.update(self.position, 0)
     
     def delete_explosion_status(self):
         return self.delete_explosion
@@ -230,20 +233,26 @@ class Factory_Plant(pg.sprite.Sprite):
         self.rect.center = position.x,position.y+20
 
 class ProtectedArea(object):
-    def __init__(self, radius, coordenates, window):
+    def __init__(self, radius, coordenates, window=None):
         super().__init__()
         self.coordenates = coordenates
         self.radius = radius
         self.window = window
-        self.plant = Factory_Plant()
-        self.all_sprites = pg.sprite.Group()
-        self.all_sprites.add(self.plant)
         self.life = 100
         self.active = True
-        self.font24 = pg.font.SysFont(None, 30)
+        if self.window is not None:
+            self.plant = Factory_Plant()
+            self.all_sprites = pg.sprite.Group()
+            self.all_sprites.add(self.plant)
+            self.font24 = pg.font.SysFont(None, 30)
+        else:
+            self.plant = None
+            self.all_sprites = None
+            self.font24 = None
 
     def draw_legend(self):
-         # Writes the App name in screen
+        if self.window is None or self.font24 is None:
+            return
         img = self.font24.render(f'Protected Area:{self.life}%', True, LIGHT_BLUE)
         self.window.blit(img, (self.coordenates[0]-120, self.coordenates[1]+self.radius))
         if self.active== False:
@@ -251,15 +260,17 @@ class ProtectedArea(object):
             self.window.blit(img, (self.coordenates[0]-100, self.coordenates[1]+self.radius+20))
 
     def draw(self):
+        if self.window is None:
+            return
         self.draw_legend()
         pg.draw.circle(self.window, 
                         (200, 100, 100), 
                         self.coordenates, 
                         self.radius, 
                         10)
-        # usar sprite para desenhar drone
-        self.all_sprites.draw(self.window)
-        self.all_sprites.update(self.coordenates,0)
+        if self.all_sprites is not None:
+            self.all_sprites.draw(self.window)
+            self.all_sprites.update(self.coordenates,0)
 
     def attacked(self):
         self.life -= 20
