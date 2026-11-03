@@ -1018,31 +1018,13 @@ class LoyalWingman(Vehicle):
 
     def arrive(self, target):
         """
-            Arrive using position controler PV
+        Arrive steering behavior using proportional-derivative (PD) position control.
         """
-        # Calculates vector desired position
-        #kp = 0.0024
-        #kp = 50
-        #kv = 800
-        xi=0.9
-        wn=15/60
-        kv = 2*MASS*xi*wn
-        kp = MASS*wn**2
-
-        kv = self.kv
-        kp = self.kp
-
-        self.desired = kp * (target - self.location) - kv * self.velocity
-
-        a_desired =  limit(self.desired, self.max_force)
-
+        desired_force = self.kp * (target - self.location) - self.kv * self.velocity
+        a_desired = limit(desired_force, self.max_force)
         self.applyForce(a_desired)
-        # Simulates Wind - random Noise
-        #wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
-        #self.applyForce(wind)
-        # Draws current target as a point 
         if self.window is not None:
-            pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+            pg.draw.circle(self.window, self.color_target, target, 5, 0)
 
     def collision_avoidance_leader(self, pos_leader):
         """
@@ -1069,27 +1051,15 @@ class LoyalWingman(Vehicle):
                 self.applyForce(-f_repulsion)
 
     def fire_vaporizer(self, kamikaze_position):
-        # check distanceß
-        #print(f' Atirei no kamikaze me {kamikaze_position}')
-        try:
-            # check if attack was successful or not
-            status = self.vaporizer_gun.fire(self.index_closest)
-            self.attack_status = (  kamikaze_position, status )
-        except:
-            pass
+        target = getattr(self, 'kamikaze_to_attack', self.index_closest)
+        status = self.vaporizer_gun.fire(target)
+        self.attack_status = (kamikaze_position, status)
 
     def fire_freezing(self, kamikaze_position):
-        # check distanceß
-        #print(f' Atirei no kamikaze me {kamikaze_position}')
-        try:
-            # check if attack was successful or not
-            status = self.freezing_gun.fire(self.index_closest)
-            # draws freezing gun shot if executed
-            if status and self.window is not None:
-                pg.draw.line(self.window, (0, 100, 0), self.location, self.closest_kamikaze , 3)
-
-        except:
-            pass
+        target = getattr(self, 'kamikaze_to_attack', self.index_closest)
+        status = self.freezing_gun.fire(target)
+        if status and self.window is not None:
+            pg.draw.line(self.window, (0, 100, 0), self.location, self.closest_kamikaze, 3)
 
     def check_attack(self):
         return self.attack_status

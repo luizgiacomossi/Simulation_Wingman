@@ -5,26 +5,17 @@ from math import inf
 
 class LoyalWingmanBehaviorTree(BehaviorTree):
     """
-    Represents a behavior tree of a roomba cleaning robot.
+    Tactical Behavior Tree for Loyal Wingman escort UAVs in MUM-T defense.
+    Coordinates threat detection, escort formation keeping, and weapons engagement.
     """
     def __init__(self):
         super().__init__()
-        # Todo: construct the tree here
-        raiz = self.root = SelectorNode("root") # Raiz: Componente Selector
-    # OLD
-        #Construção Sequence Esquerdo
-        sequenceLeft = SequenceNode("SequenciaEsquerda") # Instancia Nó Sequence lado esquerdo
-        raiz.add_child(sequenceLeft) # add Nó a Raiz da arvore
-        sequenceLeft.add_child(ChaseThreatNode())
-        #sequenceLeft.add_child(DefendProtectedAreaNode())
-        sequenceLeft.add_child(GoToFormationNode())  # Adiciona Nó de Ação a componente SequenceEsquerdo: Move Forward
-        sequenceLeft.add_child(AttackThreatNode()) # Adiciona Nó de Ação a componente SequenceEsquerdo: Move In Spiral
-    
-
-## Metodos a implementar : enter() e execute() das classes a seguir
-    #SUCCESS = 0
-    #FAILURE = 1
-    #RUNNING = 2
+        root = self.root = SelectorNode("RootSelector")
+        engagement_seq = SequenceNode("ThreatEngagementSequence")
+        root.add_child(engagement_seq)
+        engagement_seq.add_child(ChaseThreatNode())
+        engagement_seq.add_child(GoToFormationNode())
+        engagement_seq.add_child(AttackThreatNode())
 
 class ChaseThreatNode(LeafNode):
     '''
@@ -75,85 +66,62 @@ class ChaseThreatNode(LeafNode):
         return ExecutionStatus(0) # Go Back em Execucao
 
 class GoToFormationNode(LeafNode):
+    """
+    Directs the escort UAV to maintain its designated formation slot around the leader.
+    """
     def __init__(self):
         super().__init__("GoToFormation")
-        # Todo: add initialization code
-        # Contagem do tempo de execucao Move Forward
-        self.time_executing : float
+        self.time_executing = 0.0
+        self.target = None
 
     def enter(self, agent):
-        # Todo: add enter logic
-        self.time_executing = 0
-        try:
-            self.target
-        except:
-            self.target = agent.get_target()
+        self.time_executing = 0.0
+        self.target = agent.get_target()
 
     def execute(self, agent):
-        # Todo: add execution logic
         self.target = agent.get_target()
-        agent.arrive(self.target)
+        if self.target is not None:
+            agent.arrive(self.target)
 
-        self.time_executing +=1
-
-        if (self.target - agent.location).length() < 10 and self.time_executing > 300:
-            self.finished = True
-
-        # Contagem de tempo de execuçao do estado
         self.time_executing += SAMPLE_TIME
-
-        # retorno Status
-        #if agent.get_bumper_state():
-            #return ExecutionStatus(1) # Falha, Sensor bumper 
-        
-        #if self.time_executing > MOVE_FORWARD_TIME: 
-            #return ExecutionStatus(0) # Sucesso, Move Forward pelo tempo definido
-        
-        return ExecutionStatus(0) # 2 Todavia em Execucao 
+        return ExecutionStatus.SUCCESS 
 
 class AttackThreatNode(LeafNode):
+    """
+    Manages weapon cooldown cycles and triggers discharge against designated targets.
+    """
     def __init__(self):
         super().__init__("Attack Threat")
-        # Todo: add initialization code
-        # Contagem do tempo de execucao Move Forward
-        self.time_cooldown_vaporizer = 0 
-        self.time_cooldown_freezing = 0 
+        self.time_cooldown_vaporizer = 0.0
+        self.time_cooldown_freezing = 0.0
 
     def enter(self, agent):
-        # Todo: add enter logic
         pass
 
     def execute(self, agent):
-        # Todo: add execution logic
-
         self.time_cooldown_vaporizer += SAMPLE_TIME
         self.time_cooldown_freezing += SAMPLE_TIME
 
-        # cheking if weapons are availiable 
         if self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
             agent.vaporizer_gun.available = True
         
         if self.time_cooldown_freezing > COOLDOWN_FREEZING:
             agent.freezing_gun.available = True
 
-        # check condition to attack
+        # Check conditions to discharge weapons
         if agent.distance_closest_kamikaze < 100 and self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
-            self.time_cooldown_vaporizer  = 0
+            self.time_cooldown_vaporizer = 0.0
             agent.fire_vaporizer(agent.closest_kamikaze)
             agent.vaporizer_gun.available = False
 
         kamikaze = agent.kamikaze_to_attack 
-        if agent.distance_closest_kamikaze < 300 and self.time_cooldown_freezing > COOLDOWN_FREEZING and kamikaze.freezing == False:
-            self.time_cooldown_freezing  = 0
+        if (agent.distance_closest_kamikaze < 300 and self.time_cooldown_freezing > COOLDOWN_FREEZING
+                and kamikaze is not None and not getattr(kamikaze, 'freezing', False)):
+            self.time_cooldown_freezing = 0.0
             agent.fire_freezing(agent.closest_kamikaze)
             agent.freezing_gun.available = False
 
-
-        # retorno Status
-            #return ExecutionStatus(1) # Falha, Sensor bumper 
-            #return ExecutionStatus(0) # Sucesso, Move Forward pelo tempo definido
-            #return ExecutionStatus(2) # Em execuçao
-        return ExecutionStatus(0) # 2 Todavia em Execucao 
+        return ExecutionStatus.SUCCESS 
 
 class DefendProtectedAreaNode(LeafNode):
     '''

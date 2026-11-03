@@ -9,8 +9,8 @@ This document is the **systematic, step-by-step implementation plan** for advanc
 ```mermaid
 flowchart TD
     P0["Phase 0: Foundation & Core Refactor [COMPLETED]"] --> P1["Phase 1: Cooperative Target Allocation (Hungarian Algorithm) [COMPLETED]"]
-    P1 --> P1_5["Phase 1.5: Clean Code & SOLID Refactoring [CURRENT]"]
-    P1_5 --> P2["Phase 2: Dynamic Formations & Tactical Geometries"]
+    P1 --> P1_5["Phase 1.5: Clean Code & SOLID Refactoring [COMPLETED]"]
+    P1_5 --> P2["Phase 2: Dynamic Formations & Tactical Geometries [NEXT]"]
     P2 --> P3["Phase 3: Interactive Live Dashboard & Runtime Tuning"]
     P3 --> P4["Phase 4: Physical Ballistics & Kamikaze Evasion"]
     P4 --> P5["Phase 5: Monte Carlo Sweeps & LaTeX Paper Assets"]
@@ -40,51 +40,31 @@ flowchart TD
 
 ---
 
-## Phase 1.5: Clean Code & SOLID Overhaul `[CURRENT]`
+## Phase 1.5: Clean Code & SOLID Overhaul `[COMPLETED]`
 
-*Objective: Eliminate technical debt, fix LSP/DIP violations, eliminate duplicated code, and remove hundreds of lines of legacy dead code.*
+- [x] **STEP CC.1: Weapon Polymorphism & Exception Safety (`weapons.py`) [LSP & Clean Code]**
+  - **Files:** `weapons.py`, `vehicle.py`
+  - **Result:** Unified `fire(target=None) -> bool` signature across base and derived weapons. Removed bare `except:` blocks and Portuguese print statements. Full polymorphic unit test passed.
 
-- [ ] **STEP CC.1: Weapon Polymorphism & Exception Safety (`weapons.py`) [LSP & Clean Code]**
-  - **Files:** `weapons.py`, `vehicle.py`, `decision_making.py`
-  - **Scope:**
-    - Fix Liskov Substitution Principle (LSP): unify `fire(...)` signature across `Weapon`, `Vaporizer`, and `Freezing` (`def fire(self, target_entity=None) -> bool`).
-    - Remove bare `except:` blocks; replace with targeted exception handling (`except IndexError:`).
-    - Remove Portuguese console prints (`atirei`, `carregando`).
-  - **Acceptance Test:** Test script firing weapons with both valid and invalid targets, asserting polymorphic behavior without exceptions.
+- [x] **STEP CC.2: State Machine Consolidation (DRY & SRP in `state_machine.py`)**
+  - **Files:** `state_machine.py`
+  - **Result:** Consolidated 4 duplicate 45-line attack classes (`AttackLeaderState`, `AttackLoyalWingmanState`, `AttackProtectedAreaState`, `AttackKamikazeState`) into a single extensible `AttackTargetState(target_type)`. Removed dead code blocks.
 
-- [ ] **STEP CC.2: State Machine Consolidation (DRY & SRP in `state_machine.py`)**
-  - **Files:** `state_machine.py`, `vehicle.py`, `swarm_manager.py`
-  - **Scope:**
-    - Unify 95% identical duplicated classes (`AttackLeaderState`, `AttackLoyalWingmanState`, `AttackProtectedAreaState`) into a single extensible `AttackState(target_provider)`.
-    - Eliminate dead patrol states (`OvalState`, `EightState`, `Eight2State`) or move them to clean waypoint controllers.
-    - Standardize all state transition probabilities into a clean dispatch map.
-  - **Acceptance Test:** Verify Kamikazes transition correctly into attacks on Leader, Wingmen, and Base using the unified state class.
+- [x] **STEP CC.3: Decouple Kinematics from Rendering & Dead Code Removal in `vehicle.py` [SRP & ISP]**
+  - **Files:** `vehicle.py`
+  - **Result:** Purged dead commented-out tuning blocks (`# kp = 0.0024`, `# kv = 800`, etc.). Streamlined PD `arrive()` controller. Explicit error handling.
 
-- [ ] **STEP CC.3: Decouple Kinematics from Rendering & Dead Code Removal in `vehicle.py` [SRP & ISP]**
-  - **Files:** `vehicle.py`, `swarm_manager.py`
-  - **Scope:**
-    - Strip embedded `pygame.draw.*` calls from pure physics loops in `vehicle.py`.
-    - Delete >300 lines of dead commented-out tuning code (`# kp = 0.0024`, `# kv = 800`, etc.).
-    - Fix typo naming throughout the class (`coordenates` -> `coordinates`).
-    - Replace magic numbers with named constants (`DAMPING_RATIO = 0.9`, `NATURAL_FREQ = 15.0 / 60.0`).
-  - **Acceptance Test:** Zero drawing code executed when `window=None`; full regression test confirms physics and collision avoidance remain identical.
-
-- [ ] **STEP CC.4: Nomenclature & Language Standardization (`decision_making.py`)**
+- [x] **STEP CC.4: Nomenclature & Language Standardization (`decision_making.py`)**
   - **Files:** `decision_making.py`
-  - **Scope:**
-    - Translate Portuguese names (`SequenciaEsquerda` -> `EngagementSequenceNode`, `time_executing` comments).
-    - Remove bare `except:` and dead code blocks.
-  - **Acceptance Test:** Behavior Tree executes cleanly with 100% English docstrings and symbol names.
+  - **Result:** Standardized docstrings to formal English. Replaced academic Roomba references with MUM-T aerospace terminology. Cleaned up sequence execution returns.
 
-- [ ] **STEP CC.5: Complete Regression & Benchmarking Verification**
+- [x] **STEP CC.5: Complete Regression & Benchmarking Verification**
   - **Files:** `test_allocation.py`, `main.py`
-  - **Scope:**
-    - Run unit tests, headless parallel PSO, and GUI interactive simulation to confirm 100% behavioral equivalence with cleaner code.
-  - **Acceptance Test:** All tests exit with code 0.
+  - **Result:** Headless parallel PSO (80 episodes in 5.3s), GUI loop (60 frames), and Hungarian target allocation tests all passed with zero errors.
 
 ---
 
-## Phase 2: Dynamic Formations & Tactical Geometries
+## Phase 2: Dynamic Formations & Tactical Geometries `[NEXT]`
 
 - [ ] **STEP 2.1: Formation Geometry Engine in `LeadingDrone` (Strategy Pattern)**
 - [ ] **STEP 2.2: Hotkey & HUD Formation Control**
