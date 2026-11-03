@@ -8,6 +8,7 @@ from behavior_tree import *
 from decision_making import *
 from animation import Explosion_kamikaze, ProtectedArea
 from utils import generate_coordenates_kamikaze
+from quadtree import Quadtree, Rect
 import matplotlib.pyplot as plt
 import statistics
 
@@ -306,16 +307,25 @@ class Simulation(object):
             self.leadingdrone.update()
             pos_leader = [self.leadingdrone.location]
 
+            # Build Quadtrees for spatial partitioning
+            boundary = Rect(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+            quadtree_loyal = Quadtree(boundary, 4)
+            for drone in self.swarm:
+                quadtree_loyal.insert(drone.location, drone)
+
+            quadtree_kamikazes = Quadtree(boundary, 4)
+            for k in self.kamikazes:
+                quadtree_kamikazes.insert(k.location, k)
+
             #--- Loyal Wingman
             for index, _ in enumerate(self.swarm):
-                # checks if drones colided with eachother
-                ## collision avoindance is not implemented yet
-                _.align_swarm(self.swarm,index)
-                _.collision_avoidance(self.swarm,list_obst,index) 
+                # checks if drones collided with each other using Quadtree
+                _.align_swarm(quadtree_loyal, index)
+                _.collision_avoidance(quadtree_loyal, list_obst, index) 
                 _.collision_avoidance_leader(pos_leader)
                 _.update()
                 #_.draw(self.screenSimulation.screen)
-                _.receive_list_kamikazes(self.kamikazes)   
+                _.receive_list_kamikazes(self.kamikazes, quadtree_kamikazes)   
 
                 # attack logic
                 attack_status = _.check_attack()
@@ -325,12 +335,11 @@ class Simulation(object):
 
             #--- Kamikazes
             for index, _ in enumerate(self.kamikazes):
-                # checks if drones colided with eachother
-                # saves leader position
+                # saves leader position and loyal quadtree for target selection
                 _.set_leader_position(pos_leader[-1])
-                ## collision avoindance is not implemented yet
-                _.align_swarm(self.kamikazes,index)
-                _.collision_avoidance(self.kamikazes,list_obst,index) 
+                _.set_quadtree_loyal(quadtree_loyal)
+                _.align_swarm(quadtree_kamikazes, index)
+                _.collision_avoidance(quadtree_kamikazes, list_obst, index) 
                 #_.collision_avoidance_leader(pos_leader)
                 _.update()
                 # check protected area

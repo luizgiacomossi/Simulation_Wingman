@@ -7,6 +7,7 @@ import random
 import copy 
 from weapons import *
 import numpy as np
+from quadtree import Quadtree, Rect
 
 vec2 = pg.math.Vector2
 
@@ -284,26 +285,35 @@ class Vehicle(object):
     def align_swarm(self, all_positions, index):
         """
          This method avoids collisions with other drones
-         During simulation it receives all the positions from all drones 
+         During simulation it receives either a Quadtree or a list of drones.
          index: is the current id of drone being checked 
         """
-        # gets all positions of simultaneos drones
+        # gets all positions of simultaneous drones
         self.index = index
         self.team = all_positions
-        aux = 0 
+        separation_factor = 2.2
+        search_radius = AVOID_DISTANCE * separation_factor
+
+        if isinstance(all_positions, Quadtree):
+            range_rect = Rect(self.location.x, self.location.y, search_radius, search_radius)
+            nearby_drones = []
+            all_positions.query(range_rect, nearby_drones)
+        else:
+            nearby_drones = all_positions
+
         soma = vec2(0,0) # sums up all directions of close drones
         count = 0 # counts the number of drones that are close
-        for p in all_positions:
-        # compares current position to all the drones
-        # aux != index -> avoids the auto-collision check
+        for p in nearby_drones:
+            # compares current position to nearby drones
+            # p != self -> avoids auto-collision check
+            if p is self:
+                continue
             d = (self.location - p.location).magnitude()
-            separation_factor = 2.2
-            if ( (d > 0) and (d < AVOID_DISTANCE*separation_factor) and (aux != index) ) :
+            if ( (d > 0) and (d < search_radius) ):
                 diff = (self.location - p.location).normalize()
-                diff = diff/d # proporcional to the distance. The closer the stronger needs to be
+                diff = diff/d # proportional to distance
                 soma += diff
                 count += 1 # p drone is close 
-            aux+=1
             
         if count > 0:
             media = soma / count
@@ -311,8 +321,6 @@ class Vehicle(object):
             media *= self.max_speed
             steer = (media - self.velocity)
             steer = limit(steer,self.max_force)
-            #----
-            #----
             self.applyForce(steer)
                   
     def draw(self, window):
@@ -338,46 +346,38 @@ class Vehicle(object):
 
     def collision_avoidance(self, positions_drones , pos_obstacles , index):
         """
-            Not working yet, it should detect obstacles and collision with other drones
+            Detects obstacles and collision with other drones using Quadtree or list
         """
-        # check drones
-        f = 1
-        aux = 0 
-        for p in positions_drones:
+        factor_distance = 2
+        dist_avoid = AVOID_DISTANCE * factor_distance
+
+        if isinstance(positions_drones, Quadtree):
+            range_rect = Rect(self.location.x, self.location.y, dist_avoid, dist_avoid)
+            nearby_drones = []
+            positions_drones.query(range_rect, nearby_drones)
+        else:
+            nearby_drones = positions_drones
+
+        for p in nearby_drones:
+            if p is self:
+                continue
             d = (self.location - p.location).length()
-            factor_distance = 2
-            dist_avoid = AVOID_DISTANCE*factor_distance
-            # Distance between loyal wingman drones
-
-            #dist_avoid = 2 * pi * DISTANCE_LEADER / NUM_DRONES 
-            if ( d < dist_avoid )  and (aux != index):
-                #f = (self.velocity - self.velocity.normalize()*self.max_speed )/ SAMPLE_TIME
-                #f = limit(f,self.max_force)
-                #self.velocity *= d/(AVOID_DISTANCE*factor_distance)
-                f_repulsion = derivativeBivariate(0.001,.001, p.location , self.location )/SAMPLE_TIME
-                #print(f_repulsion)
-                f_repulsion = limit(f_repulsion,self.max_force*1.8)
-
+            if 0 < d < dist_avoid:
+                f_repulsion = derivativeBivariate(0.001, .001, p.location, self.location) / SAMPLE_TIME
+                f_repulsion = limit(f_repulsion, self.max_force * 1.8)
                 self.applyForce(-f_repulsion)
-                #print(f'Alerta de colisão drone {index} com drone {aux}')
                 break
-            aux +=1
 
         # --- Repulsion From obstacles
         for p in pos_obstacles:
             d = (self.location - p).length()
             factor_repulsion = 0.005
-            dist_avoid = RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE
-            if ( d < dist_avoid ) :
-                f_repulsion = derivativeBivariate(factor_repulsion,factor_repulsion, p , self.location  )/SAMPLE_TIME
-                #print(f_repulsion)
-                f_repulsion = limit(f_repulsion,self.max_force*1.8)
-             #----
-                # This condition checks if drone collided with wall
-                # if collided, this avoids that the drone goes over the obstacle
+            dist_avoid_obst = RADIUS_OBSTACLES * 1.6 + AVOID_DISTANCE
+            if ( d < dist_avoid_obst ) :
+                f_repulsion = derivativeBivariate(factor_repulsion, factor_repulsion, p, self.location) / SAMPLE_TIME
+                f_repulsion = limit(f_repulsion, self.max_force * 1.8)
                 if (d < AVOID_DISTANCE):
-                    self.applyForce(- self.velocity.normalize()*self.max_speed) 
-                    
+                    self.applyForce(- self.velocity.normalize() * self.max_speed)
                 self.applyForce(-f_repulsion)
 
 class VehiclePF(object):
@@ -960,8 +960,9 @@ class LoyalWingman(Vehicle):
         # param for chase a threat 
         self.distance_chase = distance_chase
 
-    def receive_list_kamikazes(self, kamikazes):
+    def receive_list_kamikazes(self, kamikazes, quadtree_kamikazes=None):
         self.kamikazes = kamikazes
+        self.quadtree_kamikazes = quadtree_kamikazes
         self.check_distance_kamikazes()
         self.vaporizer_gun.receive_list_kamikazes(kamikazes)
         self.freezing_gun.receive_list_kamikazes(kamikazes)
@@ -971,13 +972,23 @@ class LoyalWingman(Vehicle):
         closest = vec2(inf,inf)
         closest_distance = inf
         self.index_closest = 0
+        self.kamikaze_to_attack = None
 
-        for index ,k in enumerate(self.kamikazes):
+        if hasattr(self, 'quadtree_kamikazes') and isinstance(self.quadtree_kamikazes, Quadtree):
+            search_radius = max(self.distance_chase, 150)
+            range_rect = Rect(p.x, p.y, search_radius, search_radius)
+            candidate_kamikazes = []
+            self.quadtree_kamikazes.query(range_rect, candidate_kamikazes)
+        else:
+            candidate_kamikazes = self.kamikazes if self.kamikazes else []
+
+        for k in candidate_kamikazes:
             distance = (p - k.location).magnitude()
             if distance < closest_distance:
                 closest_distance = distance
                 closest = k.location
-                self.index_closest = index 
+                if self.kamikazes and k in self.kamikazes:
+                    self.index_closest = self.kamikazes.index(k)
                 self.kamikaze_to_attack = k
 
         self.closest_kamikaze = closest
@@ -1090,6 +1101,7 @@ class Kamikaze(Vehicle):
         self.leader_loyal = leader
         self.leader_position = leader.location
         self.protected_area = protected_area
+        self.quadtree_loyal = None
 
         #timer for slowdown after freezing gun
         self.freezing_timer = TIME_FROZEN
@@ -1130,39 +1142,48 @@ class Kamikaze(Vehicle):
         if len(self.memory_location) > SIZE_TRACK:
             self.memory_location.pop(0)    
 
+    def set_quadtree_loyal(self, quadtree_loyal):
+        self.quadtree_loyal = quadtree_loyal
+
     def define_target(self):
         '''
             Criteria to select a loyal wingman to attack
         '''
         closest_loyal = vec2(inf,inf)
         distance_closest = inf
-        index_loyal = 0
 
-        if len(self.loyalwingmen) > 0: # check if there are loyalwingman 
-            for l in self.loyalwingmen:
-                pos = l.get_position() # position of loyalwingman
+        if hasattr(self, 'quadtree_loyal') and isinstance(self.quadtree_loyal, Quadtree):
+            search_radius = 400
+            range_rect = Rect(self.location.x, self.location.y, search_radius, search_radius)
+            candidate_loyal = []
+            self.quadtree_loyal.query(range_rect, candidate_loyal)
+        else:
+            candidate_loyal = self.loyalwingmen if self.loyalwingmen else []
+
+        if len(candidate_loyal) > 0:
+            for l in candidate_loyal:
+                pos = l.get_position()
                 distance_to_loyalwingman = (self.get_position() - pos).length()
 
                 if distance_to_loyalwingman < distance_closest:
                     distance_closest = distance_to_loyalwingman
                     closest_loyal = pos
 
-                if distance_to_loyalwingman < SIZE_DRONE*2: # Radius of explotion
-                    self.explode_loyalwingman(index_loyal)
-                    self.explode = True # Self destruction command
-                
-                index_loyal += 1
-        #else: # no more loyalwingman left
-        if self.leader_position: # leader is the last
-            closest_loyal = self.leader_position
+                if distance_to_loyalwingman < SIZE_DRONE*2:
+                    if self.loyalwingmen and l in self.loyalwingmen:
+                        index_loyal = self.loyalwingmen.index(l)
+                        self.explode_loyalwingman(index_loyal)
+                    self.explode = True
+
+        if self.leader_position:
             distance_to_leader = self.location.distance_to(self.leader_position)
+            if distance_to_leader < distance_closest:
+                closest_loyal = self.leader_position
             if distance_to_leader < SIZE_DRONE*2: 
                 self.explode_leader()
-                self.explode = True #
-
-        else:# no more drones left
+                self.explode = True
+        elif not candidate_loyal:
             closest_loyal = self.get_position()
-
 
         self.closest_loyal = closest_loyal
 
