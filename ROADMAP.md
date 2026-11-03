@@ -124,6 +124,16 @@ flowchart TD
     3. **Out-of-Ammo Sacrificial Ramming Branch:** When cartridges are exhausted and threat breaches inner ring, execute sacrificial kinetic interception (body-block) to save the leader.
   - **Acceptance Test:** Wingmen conserve ammo, maintain tight escort perimeter against decoys, and execute physical body-blocks when out of ammo.
 
+- [ ] **STEP 4.5: Hierarchical SLM Tactical Commander (`tactical_commander_slm.py`)**
+  - **Files to create/modify:** `tactical_commander_slm.py`, `vehicle.py`, `swarm_manager.py`, `gui_manager.py`
+  - **Scope:** Integrate an edge-deployable Small Language Model (SLM) on the Leading Drone as an explainable tactical mission commander:
+    1. **Hierarchical Two-Tier Control:** Strategic reasoning at low frequency ($0.5 - 2\text{ Hz}$ or event-triggered) while reactive physics and Behavior Trees run at $60\text{ Hz}$.
+    2. **Tactical Context Prompting:** Formats battlefield telemetry (threat vectors, swarm ammo, base status, casualties) into compact structured prompts.
+    3. **Explainable AI (XAI) Output:** Generates structured JSON commands (`formation`, `priority`, `roe`) alongside natural language tactical reasoning (`tactical_assessment`).
+    4. **Datalink Integration:** Dispatches orders as `TacticalMessage` via `MessageManager`.
+    5. **Dual-Mode Execution:** Local SLM inference for interactive GUI sessions and high-speed heuristic oracle fallback for 8,000+ FPS headless Monte Carlo sweeps.
+  - **Acceptance Test:** SLM assesses novel threat waves, outputs valid JSON tactical commands, logs explainable natural language rationale to HUD, and runs without degrading simulation FPS.
+
 ---
 
 ## Phase 5: Monte Carlo Sweeps & Publication Assets (PhD/Paper)
