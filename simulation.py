@@ -12,6 +12,7 @@ from quadtree import Quadtree, Rect
 from display_manager import DisplayManager
 from experiment_manager import ExperimentManager
 from swarm_manager import SwarmManager
+from gui_manager import GUIManager
 import matplotlib.pyplot as plt
 import statistics
 
@@ -29,11 +30,16 @@ class ProcessorUserInput:
         for event in pygame.event.get():
             if event.type == pygame.QUIT: sys.exit()
 
+            # 1. Forward event to GUIManager first (Minimap jump, Agent Inspector, Pause)
+            if hasattr(self.simulation, 'gui_manager') and self.simulation.gui_manager is not None:
+                if self.simulation.gui_manager.handle_event(event, self.simulation, self.simulation.screenSimulation):
+                    continue
+
             # Forward zoom and pan to display_manager
             if hasattr(self.simulation, 'screenSimulation') and hasattr(self.simulation.screenSimulation, 'handle_event'):
                 self.simulation.screenSimulation.handle_event(event)
 
-            # Key 'd' pressed
+            # Key 'd' pressed -> debug toggle
             if event.type == pygame.KEYDOWN and event.key == pygame.K_d:
                 for _ in self.simulation.swarm:
                     _.set_debug()
@@ -52,13 +58,12 @@ class ProcessorUserInput:
                 raw_mouse = vec2(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
                 world_pos = self.simulation.screenSimulation.screen_to_world(raw_mouse)
 
-                # left button - New Target
-                if pygame.mouse.get_pressed()[0] == True:
-                    # moves leading drone to point clicked in world coordinates
+                # left button - New Target for Leader
+                if event.button == 1:
                     self.simulation.set_target_leader(world_pos)
 
                 # right button - New KAMIKAZE
-                if pygame.mouse.get_pressed()[2] == True:
+                if event.button == 3:
                     self.simulation.add_new_kamikaze(pos=world_pos)              
             
             if event.type == pygame.KEYDOWN and event.key == pygame.K_p:  
@@ -66,12 +71,12 @@ class ProcessorUserInput:
                 self.history.plot_graphs()
                 self.history.print()
 
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:  
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_UP or event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS):  
                 self.simulation.accelerated_factor += 3
 
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:   
-                if self.simulation.accelerated_factor > 0 :
-                   self.simulation.accelerated_factor -= 3
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_DOWN or event.key == pygame.K_MINUS):   
+                if self.simulation.accelerated_factor > 1:
+                   self.simulation.accelerated_factor = max(1, self.simulation.accelerated_factor - 3)
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r:   
                    self.simulation.accelerated_factor = 1
@@ -105,6 +110,8 @@ class Simulation(object):
         self.screenSimulation = screenSimulation
         self.canvas = getattr(self.screenSimulation, 'world_surface', getattr(self.screenSimulation, 'screen', None))
         self.accelerated_factor = 1
+        self.is_paused = False
+        self.gui_manager = GUIManager() if self.canvas is not None else None
         self.swarm_manager = SwarmManager(window=self.canvas)
 
     @property
@@ -164,11 +171,14 @@ class Simulation(object):
         return self.swarm_manager.counter_kamikazes_destroyed
 
     def run_simulation(self, pos_leader, list_obst, accelerated_factor = 1):
-        for _ in range(accelerated_factor):
-            self.swarm_manager.update(list_obst)
+        if not self.is_paused:
+            for _ in range(accelerated_factor):
+                self.swarm_manager.update(list_obst)
 
         if self.canvas is not None:
             self.swarm_manager.draw(self.canvas, self.screenSimulation)
+            if self.gui_manager is not None:
+                self.gui_manager.draw_world_overlays(self.canvas, self, self.screenSimulation)
 
     def update_background(self):
         if self.canvas is None:

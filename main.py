@@ -128,8 +128,8 @@ def main():
 
     while run:
         # Draws at every dt
-        if simulation.accelerated_factor>0:
-            time_running += SAMPLE_TIME*simulation.accelerated_factor
+        if not getattr(simulation, 'is_paused', False) and simulation.accelerated_factor > 0:
+            time_running += SAMPLE_TIME * simulation.accelerated_factor
 
         screenSimulation.clock.tick(FREQUENCY)
 
@@ -151,11 +151,11 @@ def main():
         if hasattr(screenSimulation, 'render_to_screen'):
             screenSimulation.render_to_screen()
 
-        # Writes the App name in screen
+        # Writes HUD and Tactical Inspector onto screen
         screenSimulation.WriteLegendOnCanvas(simulation, simulation.accelerated_factor, time_running, history)
 
         # Reset simulation if finished
-        if simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True or len(simulation.kamikazes) == 0 or simulation.protected_area.is_active() == False: 
+        if not getattr(simulation, 'is_paused', False) and (simulation.get_number_running_simultations() < 1 or simulation.leadingdrone.destroyed == True or len(simulation.kamikazes) == 0 or simulation.protected_area.is_active() == False): 
             
             enemies_destroyed = simulation.get_kamikazes_destroyed()
             # Determine end condition

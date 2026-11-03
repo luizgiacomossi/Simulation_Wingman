@@ -34,6 +34,17 @@ class BehaviorTree(object):
         if self.root is not None:
             self.root.execute(agent)
 
+    def get_current_state(self):
+        """
+        Returns the active node name in the behavior tree for inspection/HUD.
+        """
+        if self.root is None:
+            return "Idle"
+        curr = self.root
+        while hasattr(curr, 'running_child') and curr.running_child is not None:
+            curr = curr.running_child
+        return getattr(curr, 'node_name', 'Active')
+
 class TreeNode(object):
     """
     Represents a node of a behavior tree.

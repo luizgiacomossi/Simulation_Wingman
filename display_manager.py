@@ -167,20 +167,9 @@ class DisplayManager(object):
             self.screen.blit(scaled_surface, offset)
 
     def WriteLegendOnCanvas(self, simulation, accelerated_factor, time_running, history):
-        """Draws HUD telemetry directly onto the unscaled screen."""
-        img = self.get_rendered_text(self.font24, 'Loyal Wingman Simulation', LIGHT_BLUE)
-        self.screen.blit(img, (20, 20))
-        img = self.get_rendered_text(self.font20, f'Accelerated Factor: {accelerated_factor}', LIGHT_BLUE)
-        self.screen.blit(img, (20, 45))
-        img = self.get_rendered_text(self.font20, f'Zoom: {self.zoom_level:.2f}x (Scroll to zoom, Middle-click to pan)', (180, 220, 255))
-        self.screen.blit(img, (20, 65))
-        img = self.get_rendered_text(self.font24, f'#loyal wingman: {simulation.get_number_running_simultations()}', LIGHT_BLUE)
-        self.screen.blit(img, (20, 90))
-        img = self.get_rendered_text(self.font24, f'#KamikazesDestroyed: {simulation.get_kamikazes_destroyed()}', LIGHT_BLUE)
-        self.screen.blit(img, (20, 115))
-        img = self.get_rendered_text(self.font24, f'Time: {time_running:0.2f}', LIGHT_BLUE)
-        self.screen.blit(img, (20, 140))
-        img = self.get_rendered_text(self.font24, f'Iteration: {history.iterations+1}', LIGHT_BLUE)
-        self.screen.blit(img, (20, 165))
-        img = self.get_rendered_text(self.font20, f'Params: #loyal {simulation.num_loyalwingman} #kamikazes {simulation.num_kamikazes}', LIGHT_BLUE)
-        self.screen.blit(img, (20, 190))
+        """Draws HUD telemetry and Tactical Inspector directly onto the unscaled screen."""
+        if hasattr(simulation, 'gui_manager') and simulation.gui_manager is not None:
+            simulation.gui_manager.draw_screen_hud(self.screen, simulation, self, time_running, history)
+        else:
+            img = self.get_rendered_text(self.font24, 'Loyal Wingman Simulation', LIGHT_BLUE)
+            self.screen.blit(img, (20, 20))
