@@ -765,6 +765,10 @@ class LeadingDrone(Vehicle):
         super().__init__(x, y, behavior, window)
         self.distance_formation = distance_leader
         self.distance_rings_formation = distance_rings_formation
+        self.destroyed = False
+
+    def destroy(self):
+        self.destroyed = True
 
     def arrive_new(self, target):
         """
@@ -958,12 +962,13 @@ class LeadingDrone(Vehicle):
 
         return list_positions
 
-    def destroyed(self):
+    def destroyed_legacy(self):
         self.destroyed = True
 
 class LoyalWingman(Vehicle):
     def __init__(self, x, y, behavior, window, protected_area, distance_chase = 400, kp= 0.625, kv= 4.5):
         super().__init__(x, y, behavior, window)
+        self.destroyed = False
         self.error = vec2(0,0)
         self.kamikazes = None
         self.vaporizer_gun = Vaporizer(1,10,1,100,self.kamikazes)
@@ -977,6 +982,9 @@ class LoyalWingman(Vehicle):
         self.kv = kv
         # param for chase a threat 
         self.distance_chase = distance_chase
+
+    def destroy(self):
+        self.destroyed = True
 
     def receive_list_kamikazes(self, kamikazes, quadtree_kamikazes=None):
         self.kamikazes = kamikazes
@@ -1142,7 +1150,7 @@ class Kamikaze(Vehicle):
         '''
             Criteria to select a loyal wingman to attack
         '''
-        closest_loyal = vec2(inf,inf)
+        closest_loyal = vec2(inf, inf)
         distance_closest = inf
 
         if hasattr(self, 'quadtree_loyal') and isinstance(self.quadtree_loyal, Quadtree):
@@ -1153,32 +1161,23 @@ class Kamikaze(Vehicle):
         else:
             candidate_loyal = self.loyalwingmen if self.loyalwingmen else []
 
-        if len(candidate_loyal) > 0:
-            for l in candidate_loyal:
+        valid_loyal = [l for l in candidate_loyal if not getattr(l, 'destroyed', False)]
+
+        if len(valid_loyal) > 0:
+            for l in valid_loyal:
                 pos = l.get_position()
                 distance_to_loyalwingman = (self.get_position() - pos).length()
 
                 if distance_to_loyalwingman < distance_closest:
                     distance_closest = distance_to_loyalwingman
                     closest_loyal = pos
-
-                if distance_to_loyalwingman < SIZE_DRONE*2:
-                    if self.loyalwingmen and l in self.loyalwingmen:
-                        index_loyal = self.loyalwingmen.index(l)
-                        self.explode_loyalwingman(index_loyal)
-                    self.explode = True
-
-        if self.leader_position:
-            distance_to_leader = self.location.distance_to(self.leader_position)
-            if distance_to_leader < distance_closest:
-                closest_loyal = self.leader_position
-            if distance_to_leader < SIZE_DRONE*2: 
-                self.explode_leader()
-                self.explode = True
-        elif not candidate_loyal:
+        elif self.leader_position:
+            closest_loyal = self.leader_position
+        else:
             closest_loyal = self.get_position()
 
         self.closest_loyal = closest_loyal
+        return self.closest_loyal
 
     def get_closest_target(self):
         '''
@@ -1187,13 +1186,49 @@ class Kamikaze(Vehicle):
         return self.closest_loyal
            
     def explode_loyalwingman(self, index):
-        self.loyalwingmen.pop(index)
+        if self.loyalwingmen and index < len(self.loyalwingmen):
+            drone = self.loyalwingmen[index]
+            drone.destroyed = True
+            self.loyalwingmen.pop(index)
     
     def explode_leader(self):
-        try:
-            self.leader_loyal.destroyed()
-        except:
-            print('Leader Already destroyed')
+        if self.leader_loyal is not None:
+            if hasattr(self.leader_loyal, 'destroy'):
+                self.leader_loyal.destroy()
+            else:
+                self.leader_loyal.destroyed = True
+
+    def check_collisions(self):
+        """
+        Detects physical impact with Loyal Wingmen and the Leader Drone.
+        If contact occurs (within 2 * SIZE_DRONE), detonates kamikaze and destroys victim.
+        """
+        # 1. Collision with Loyal Wingmen
+        if hasattr(self, 'quadtree_loyal') and isinstance(self.quadtree_loyal, Quadtree):
+            search_radius = SIZE_DRONE * 2.5
+            range_rect = Rect(self.location.x, self.location.y, search_radius, search_radius)
+            candidate_loyal = []
+            self.quadtree_loyal.query(range_rect, candidate_loyal)
+        else:
+            candidate_loyal = self.loyalwingmen if self.loyalwingmen else []
+
+        for drone in candidate_loyal:
+            if not getattr(drone, 'destroyed', False):
+                dist = (self.location - drone.location).length()
+                if dist <= SIZE_DRONE * 2:
+                    drone.destroyed = True
+                    if self.loyalwingmen and drone in self.loyalwingmen:
+                        self.loyalwingmen.remove(drone)
+                    self.explode = True
+                    return
+
+        # 2. Collision with Leader Drone
+        if self.leader_loyal is not None and not getattr(self.leader_loyal, 'destroyed', False):
+            dist_to_leader = (self.location - self.leader_loyal.location).length()
+            if dist_to_leader <= SIZE_DRONE * 2:
+                self.explode_leader()
+                self.explode = True
+                return
 
     def check_protected_area(self):
         # explode protected_area

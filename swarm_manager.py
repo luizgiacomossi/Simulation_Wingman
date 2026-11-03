@@ -224,6 +224,7 @@ class SwarmManager(object):
             kamikaze.align_swarm(quadtree_kamikazes, index)
             kamikaze.collision_avoidance(quadtree_kamikazes, list_obst, index)
             kamikaze.update()
+            kamikaze.check_collisions()
             kamikaze.check_protected_area()
 
             if kamikaze.get_explode_state():
@@ -234,6 +235,12 @@ class SwarmManager(object):
         for idx in reversed(exploded_indices):
             if idx < len(self.kamikazes):
                 self.kamikazes.pop(idx)
+
+        # Clean up destroyed loyal wingmen
+        destroyed_wingmen = [w for w in self.swarm if getattr(w, 'destroyed', False)]
+        for w in destroyed_wingmen:
+            self.explosions.append(Explosion_kamikaze(w.location, self.window))
+        self.swarm[:] = [w for w in self.swarm if not getattr(w, 'destroyed', False)]
 
         # Maintain constant number of threats
         while len(self.kamikazes) < self.num_kamikazes:

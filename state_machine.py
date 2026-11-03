@@ -503,9 +503,13 @@ class AttackTargetState(State):
         if self.target_type == "leader":
             return agent.get_leader_position()
         elif self.target_type in ["loyal", "wingman"]:
+            if hasattr(agent, 'define_target'):
+                agent.define_target()
             return agent.get_closest_target()
         elif self.target_type in ["base", "protected_area"]:
             return agent.protected_area.coordenates if agent.protected_area else agent.location
+        if hasattr(agent, 'define_target'):
+            agent.define_target()
         return agent.get_closest_target()
 
     def execute(self, agent):
