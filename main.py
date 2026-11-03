@@ -120,17 +120,20 @@ while run:
     input_processor.read()
     # Draw scenario
     simulation.update_background()
-    #grid
-    #grid_field.draw(screenSimulation.screen)
     # updates and draws all simulated UAVs  
     simulation.run_simulation(avoid_list,list_obst, simulation.accelerated_factor)
     # draw obstacles 
+    canvas = getattr(screenSimulation, 'world_surface', screenSimulation.screen)
     for _ in list_obst:
-        pygame.draw.circle(screenSimulation.screen,(200, 250, 200), _ , radius=RADIUS_OBSTACLES, width = 2)
-        pygame.draw.circle(screenSimulation.screen,(200, 250, 200), _ , radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width = 2)
-        obst.all_sprites.draw(screenSimulation.screen)
+        pygame.draw.circle(canvas,(200, 250, 200), _ , radius=RADIUS_OBSTACLES, width = 2)
+        pygame.draw.circle(canvas,(200, 250, 200), _ , radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width = 2)
+        obst.all_sprites.draw(canvas)
         obst.all_sprites.update(_,0)
     
+    # Render world surface to display screen with camera zoom and pan
+    if hasattr(screenSimulation, 'render_to_screen'):
+        screenSimulation.render_to_screen()
+
     # Writes the App name in screen
     screenSimulation.WriteLegendOnCanvas(simulation, simulation.accelerated_factor, time_running, history)
 

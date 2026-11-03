@@ -9,6 +9,7 @@ from decision_making import *
 from animation import Explosion_kamikaze, ProtectedArea
 from utils import generate_coordenates_kamikaze
 from quadtree import Quadtree, Rect
+from display_manager import DisplayManager
 import matplotlib.pyplot as plt
 import statistics
 
@@ -25,23 +26,38 @@ class ProcessorUserInput:
         # Pygame Events 
         for event in pygame.event.get():
             if event.type == pygame.QUIT: sys.exit()
-            
+
+            # Forward zoom and pan to display_manager
+            if hasattr(self.simulation, 'screenSimulation') and hasattr(self.simulation.screenSimulation, 'handle_event'):
+                self.simulation.screenSimulation.handle_event(event)
+
             # Key 'd' pressed
             if event.type == pygame.KEYDOWN and event.key == pygame.K_d:
                 for _ in self.simulation.swarm:
                     _.set_debug()
 
-            # Mouse Clicked -> new taget or new Drone 
+            # Key 'c' pressed -> Center camera on leader
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_c:
+                if hasattr(self.simulation, 'leadingdrone') and hasattr(self.simulation.leadingdrone, 'location'):
+                    self.simulation.screenSimulation.center_on(self.simulation.leadingdrone.location)
+
+            # Key '0' or 'HOME' -> Reset zoom/pan
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_0 or event.key == pygame.K_HOME):
+                self.simulation.screenSimulation.reset_view()
+
+            # Mouse Clicked -> new target or new Drone 
             if event.type == pygame.MOUSEBUTTONDOWN:
+                raw_mouse = vec2(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
+                world_pos = self.simulation.screenSimulation.screen_to_world(raw_mouse)
+
                 # left button - New Target
                 if pygame.mouse.get_pressed()[0] == True:
-                    # moves leading drone to point clicked
-                    target_leading = vec2(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1])
-                    self.simulation.set_target_leader(target_leading)
+                    # moves leading drone to point clicked in world coordinates
+                    self.simulation.set_target_leader(world_pos)
 
                 # right button - New KAMIKAZE
                 if pygame.mouse.get_pressed()[2] == True:
-                    self.simulation.add_new_kamikaze()              
+                    self.simulation.add_new_kamikaze(pos=world_pos)              
             
             if event.type == pygame.KEYDOWN and event.key == pygame.K_p:  
                 # plot history
@@ -131,40 +147,12 @@ class Rate_Simulation(object):
             # mais rapidamente, enquanto o penaliza por desviar da linha
         return reward  #
 
-class ScreenSimulation(object):
-
-    def __init__(self):
-        pygame.init()
-        self.font15 = pygame.font.SysFont(None, 15)
-        self.font20 = pygame.font.SysFont(None, 20)
-        self.font24 = pygame.font.SysFont(None, 24)
-        self.size = SCREEN_WIDTH, SCREEN_HEIGHT 
-        self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode(self.size,pygame.RESIZABLE,  pygame.SRCALPHA)
-
-        # load backgound
-        self.background_image = pygame.image.load("models/texture/camouflage.png").convert()
-        self.background_image = pygame.transform.scale(self.background_image,(SCREEN_WIDTH,SCREEN_HEIGHT))
-
-    def WriteLegendOnCanvas(self, simulation, accelerated_factor , time_running, history):
-
-        # Writes the App name in screen
-        img = self.font24.render('Loyal Wingman Simulation', True, LIGHT_BLUE)
-        self.screen.blit(img, (20, 20))
-        # Writes the App name in screen
-        img = self.font20.render(f'Accelerated Factor: {accelerated_factor}', True, LIGHT_BLUE)
-        self.screen.blit(img, (20, 40))
-        #   Writes # Loyal in  screen
-        img = self.font24.render(f'#loyal wingman: {simulation.get_number_running_simultations()}', True, LIGHT_BLUE)
-        self.screen.blit(img, (20, 60))
-        img = self.font24.render(f'#KamikazesDestroyed: {simulation.get_kamikazes_destroyed()}', True, LIGHT_BLUE)
-        self.screen.blit(img, (20, 80))
-        img = self.font24.render(f'Time: {time_running:0.2f}', True, LIGHT_BLUE)
-        self.screen.blit(img, (20, 100))
-        img = self.font24.render(f'Iteration: {history.iterations+1}', True, LIGHT_BLUE)
-        self.screen.blit(img, (20, 120))
-        img = self.font24.render(f'Iteration using: #loyal {simulation.num_loyalwingman} #kamikazes {simulation.num_kamikazes}', True, LIGHT_BLUE)
-        self.screen.blit(img, (20, 140))
+class ScreenSimulation(DisplayManager):
+    """
+    Maintains backward compatibility with ScreenSimulation while providing
+    full DisplayManager features (zoom, pan, subsurface scaling).
+    """
+    pass
 
 class kamikaze_control(object):
     def __init__(self, num_kamikazes, screen):
@@ -176,6 +164,7 @@ class Simulation(object):
     
     def __init__(self, screenSimulation):
         self.screenSimulation = screenSimulation
+        self.canvas = getattr(self.screenSimulation, 'world_surface', self.screenSimulation.screen)
         self.accelerated_factor = 1
         # state machines for each vehicle
         self.behaviors =[] 
@@ -186,7 +175,7 @@ class Simulation(object):
         self.leadingdrone = []
         self.protected_area = ProtectedArea(radius=240,
                                             coordenates=vec2(1800,170),
-                                            window= self.screenSimulation.screen)
+                                            window= self.canvas)
         #self.create_leading_drone()
         # Counter
         self.counter_kamikazes_destroyed = 0
@@ -217,10 +206,9 @@ class Simulation(object):
             #self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
             self.behaviors.append( LoyalWingmanBehaviorTree() ) 
             #Instantiate drone 
-            #drone = LoyalWingman(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
             drone = LoyalWingman(random.uniform(SCREEN_WIDTH - 300,SCREEN_WIDTH),
                                  random.uniform(0 ,30), self.behaviors[-1],
-                                 self.screenSimulation.screen,
+                                 self.canvas,
                                  self.protected_area,
                                  distance_chase,
                                  #distance_chase[d],
@@ -235,7 +223,7 @@ class Simulation(object):
             drone = Kamikaze(random.uniform(0,50), 
                             random.uniform(0,50), 
                             self.behaviors[-1], 
-                            self.screenSimulation.screen, 
+                            self.canvas, 
                             LoyalWingmen= self.swarm, 
                             leader= self.leadingdrone,
                             protected_area = self.protected_area)
@@ -244,13 +232,10 @@ class Simulation(object):
 
     def add_new_uav(self):
         self.behaviors.append( FiniteStateMachine( SeekState() ) )
-         #using Old vehicle: steering behavior
-        drone = Vehicle(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, self.behaviors[-1], self.screenSimulation.screen)
-
-        #using potential fields
-        #drone = VehiclePF(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
-
-        drone.set_target(vec2(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]))
+        drone = Vehicle(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, self.behaviors[-1], self.canvas)
+        mouse_pos = vec2(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
+        world_pos = self.screenSimulation.screen_to_world(mouse_pos)
+        drone.set_target(world_pos)
         self.append_uav(drone)
     
     def append_uav(self, drone):
@@ -270,7 +255,7 @@ class Simulation(object):
         drone = Kamikaze(position[0], 
                          position[1], 
                          self.behaviors[-1], 
-                         self.screenSimulation.screen, 
+                         self.canvas, 
                          LoyalWingmen= self.swarm, 
                          leader= self.leadingdrone,
                          protected_area = self.protected_area)
@@ -280,7 +265,7 @@ class Simulation(object):
         self.leadingdrone = LeadingDrone(SCREEN_WIDTH/2, 
                                         SCREEN_HEIGHT/2, 
                                         FiniteStateMachine( SeekState() ), 
-                                        self.screenSimulation.screen,
+                                        self.canvas,
                                         distance_leader = distance_formation,
                                         distance_rings_formation= self.distance_rings_formation)
 
@@ -330,7 +315,7 @@ class Simulation(object):
                 # attack logic
                 attack_status = _.check_attack()
                 if attack_status[1]: # create explosion of kamikaze destroyed
-                        self.explosions.append(Explosion_kamikaze( attack_status[0], self.screenSimulation.screen ))
+                        self.explosions.append(Explosion_kamikaze( attack_status[0], self.canvas ))
                         _.update_attack_status()
 
             #--- Kamikazes
@@ -344,21 +329,14 @@ class Simulation(object):
                 _.update()
                 # check protected area
                 _.check_protected_area()
-                #_.draw(self.screenSimulation.screen) 
+                #_.draw(self.canvas) 
                 # getting if drone exploded 
                 explode_status = _.get_explode_state()
                 if explode_status: # Exploded
-                    self.explosions.append(Explosion_kamikaze( _.location, self.screenSimulation.screen ))
+                    self.explosions.append(Explosion_kamikaze( _.location, self.canvas ))
                 
                 # index to keep track of  drone in the list
                 index += 1
-                # # writes drone id
-                # img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
-                # self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
-                # # writes drone current behavior
-                # img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
-                # self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
-
 
                 if _.get_explode_state() == True: # delete kamikaze after explotion
                     self.kamikazes.pop(index-1)
@@ -380,64 +358,54 @@ class Simulation(object):
                     self.explosions.pop(index)
 
         #draw leading drone
-        pygame.draw.circle(self.screenSimulation.screen,(200, 250, 200), self.leadingdrone.get_position() , radius= self.distance_formation , width = 3)
-        self.leadingdrone.draw(self.screenSimulation.screen)
+        pygame.draw.circle(self.canvas,(200, 250, 200), self.leadingdrone.get_position() , radius= self.distance_formation , width = 3)
+        self.leadingdrone.draw(self.canvas)
         img = self.screenSimulation.font20.render(f'Leading Drone', True, LIGHT_BLUE)
-        self.screenSimulation.screen.blit(img, self.leadingdrone.get_position()+(0,20))
+        self.canvas.blit(img, self.leadingdrone.get_position()+(0,20))
 
         ## ------
         for index, _ in enumerate(self.swarm):
-            _.draw(self.screenSimulation.screen)
-                        # index to keep track of  drone in the list
+            _.draw(self.canvas)
             index += 1
-                # writes drone id
+            # writes drone id
             img = self.screenSimulation.font20.render(f'LoyalWingman {index}', True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
-                # writes drone current behavior
-            #img = self.screenSimulation.font20.render(_.behavior.root.node_name, True, BLUE)
-            #self.screenSimulation.screen.blit(img, _.get_position()+(0,40))
-                # writes drone current position in column and row
-            p = _.get_position()
-            col =  int(p.x/RESOLUTION) + 1
-            row = int(p.y/RESOLUTION) + 1
+            self.canvas.blit(img, _.get_position()+(0,20))
 
-                # writes drone ammo available
+            # writes drone ammo available
             ammo_vaporizer = _.vaporizer_gun.get_ammo_available()
             ammo_freezing = _.vaporizer_gun.get_ammo_available()
             img = self.screenSimulation.font15.render(f'V: {ammo_vaporizer} F:{ammo_freezing} ', True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
-                #img = self.screenSimulation.font20.render(f'Pos:{col},{row}', True, BLUE)
-                #self.screenSimulation.screen.blit(img, _.get_position()+(0,40))
+            self.canvas.blit(img, _.get_position()+(0,30))
 
         #draw protected area
         self.protected_area.draw()
 
         for index, _ in enumerate(self.kamikazes):
-            _.draw(self.screenSimulation.screen) 
+            _.draw(self.canvas) 
             index += 1
-                            # writes drone id
+            # writes drone id
             img = self.screenSimulation.font20.render(f'Kamikaze {index}', True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,20))
-                # writes drone current behavior
+            self.canvas.blit(img, _.get_position()+(0,20))
+            # writes drone current behavior
             img = self.screenSimulation.font15.render(_.behavior.get_current_state(), True, LIGHT_BLUE)
-            self.screenSimulation.screen.blit(img, _.get_position()+(0,30))
+            self.canvas.blit(img, _.get_position()+(0,30))
 
         #-------- end draw animations ---------
 
-    def add_new_kamikaze(self):
+    def add_new_kamikaze(self, pos=None):
         self.behaviors.append( FiniteStateMachine( AttackKamikazeState() ) )
-        drone = Kamikaze(0, random.uniform(0,SCREEN_HEIGHT), self.behaviors[-1], self.screenSimulation.screen, LoyalWingmen= self.swarm)
+        if pos is None:
+            pos = vec2(0, random.uniform(0, SCREEN_HEIGHT))
+        drone = Kamikaze(pos.x, pos.y, self.behaviors[-1], self.canvas, LoyalWingmen= self.swarm, leader= self.leadingdrone, protected_area= self.protected_area)
         self.kamikazes.append(drone)
 
     def update_background(self):
-        info = pygame.display.Info() # You have to call this before pygame.display.set_mode()
-        screen_width,screen_height = info.current_w,info.current_h
-        # Background
-        background_image = self.screenSimulation.background_image
-        background_image = pygame.transform.scale(background_image,(screen_width,screen_height))
-        self.screenSimulation.screen.blit(background_image, [0, 0])
-        # Draw line to delimit were kamikazes are born
-        pygame.draw.line(self.screenSimulation.screen, (100,200,100), vec2(screen_width/3,0) , vec2(screen_width/3, screen_height), 10)
+        # Draw background and delimitation line on canvas
+        if self.screenSimulation.background_image is not None:
+            self.canvas.blit(self.screenSimulation.background_image, [0, 0])
+        else:
+            self.canvas.fill((40, 44, 52))
+        pygame.draw.line(self.canvas, (100, 200, 100), vec2(WORLD_WIDTH / 3, 0), vec2(WORLD_WIDTH / 3, WORLD_HEIGHT), 10)
 
     def set_target_leader(self, target):
         # define new target to leader
