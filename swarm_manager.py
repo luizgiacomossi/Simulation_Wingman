@@ -17,6 +17,7 @@ from decision_making import LoyalWingmanBehaviorTree
 from animation import Explosion_kamikaze, ProtectedArea
 from utils import generate_coordenates_kamikaze
 from target_allocator import TargetAllocator
+from message_manager import MessageManager, TacticalMessage, MessageTopic
 
 vec2 = pygame.math.Vector2
 
@@ -44,6 +45,8 @@ class SwarmManager(object):
         self.distance_chase = 306.6
         self.target_allocator = TargetAllocator()
         self.allocation_mode = "hungarian"
+        self.message_manager = MessageManager()
+        self.simulation_time = 0.0
 
     def create_swarm(self, num_loyal=NUM_DRONES, num_kamikazes=NUM_KAMIKAZES,
                      distance_chase=306.6, kp=0.625, kv=4.5,
@@ -63,6 +66,8 @@ class SwarmManager(object):
         self.distance_formation = distance_formation
         self.distance_rings_formation = distance_rings_formation
         self.counter_kamikazes_destroyed = 0
+        self.message_manager.clear()
+        self.simulation_time = 0.0
 
         self.swarm = []
         self.kamikazes = []
@@ -79,6 +84,8 @@ class SwarmManager(object):
 
         # Create Leading Drone
         self.create_leading_drone(distance_formation=distance_formation)
+        if self.leadingdrone is not None:
+            self.leadingdrone.set_message_bus(self.message_manager, agent_id="LEADER")
 
         # Create Loyal Wingman Swarm
         for d in range(num_loyal):
@@ -94,7 +101,9 @@ class SwarmManager(object):
                 kp=kp,
                 kv=kv
             )
+            drone.index = d
             drone.projectiles_pool = self.projectiles
+            drone.set_message_bus(self.message_manager, agent_id=f"WINGMAN_{d}")
             self.swarm.append(drone)
 
         # Create Kamikaze Swarm
@@ -166,9 +175,18 @@ class SwarmManager(object):
             self.goto_formation(list_pos)
 
     def goto_formation(self, targets):
+        slots_dict = {}
         for i, drone in enumerate(self.swarm):
             if i < len(targets):
+                slots_dict[drone.agent_id or f"WINGMAN_{i}"] = targets[i]
                 drone.set_target(targets[i])
+
+        if self.leadingdrone is not None:
+            self.leadingdrone.broadcast_formation_command(
+                slots_dict=slots_dict,
+                formation_type=getattr(self.leadingdrone, 'current_formation_name', 'CIRCLE'),
+                current_time=self.simulation_time
+            )
 
     def update(self, list_obst=[]):
         """
@@ -179,6 +197,9 @@ class SwarmManager(object):
         4. Updates Kamikazes (targeting, strikes, explosions).
         5. Updates formation targets and active explosions.
         """
+        self.simulation_time += SAMPLE_TIME
+        self.message_manager.update(self.simulation_time)
+
         # 1. Leading drone
         self.leadingdrone.update()
         pos_leader = [self.leadingdrone.location]
@@ -207,6 +228,7 @@ class SwarmManager(object):
 
         # 3. Update Loyal Wingmen
         for index, drone in enumerate(self.swarm):
+            drone.process_tactical_messages(self.simulation_time)
             drone.align_swarm(quadtree_loyal, index)
             drone.collision_avoidance(quadtree_loyal, list_obst, index)
             drone.collision_avoidance_leader(pos_leader)
@@ -268,6 +290,9 @@ class SwarmManager(object):
         destroyed_wingmen = [w for w in self.swarm if getattr(w, 'destroyed', False)]
         for w in destroyed_wingmen:
             self.explosions.append(Explosion_kamikaze(w.location, self.window))
+            if getattr(w, 'message_bus', None) is not None:
+                w.broadcast_message("CASUALTY_ALERT", {"casualty_id": w.agent_id, "position": (w.location.x, w.location.y)}, self.simulation_time)
+                self.message_manager.unregister_agent(w.agent_id)
         self.swarm[:] = [w for w in self.swarm if not getattr(w, 'destroyed', False)]
 
         # Maintain constant number of threats

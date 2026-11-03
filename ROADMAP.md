@@ -64,9 +64,14 @@ flowchart TD
 
 ---
 
-## Phase 2: Dynamic Formations & Tactical Geometries `[NEXT]`
+## Phase 2: Dynamic Formations & Tactical Geometries `[IN PROGRESS]`
 
-- [ ] **STEP 2.1: Formation Geometry Engine in `LeadingDrone` (Strategy Pattern)**
+- [x] **STEP 2.0: Tactical Message Bus & Agent Datalink (`MessageManager`)**
+  - **Files:** `message_manager.py`, `vehicle.py`, `swarm_manager.py`, `test_message_manager.py`
+  - **Scope:** Implemented decentralized tactical datalink framework (`TacticalMessage`, `MessageTopic`, `MessageManager`). Provides point-to-point addressing and swarm broadcast (`SWARM`/`ALL`), individual UAV inboxes, configurable simulated network latency and EW packet loss modeling. Leader transmits formation slots via datalink broadcast; wingmen process commands via mailboxes.
+  - **Result:** Full unit test suite (`test_message_manager.py`) passed 5/5 test cases; 120 headless frames benchmarked at over 6,400 FPS; full combat regression tests passed with zero errors.
+
+- [ ] **STEP 2.1: Formation Geometry Engine via Datalink Messages (Strategy Pattern)**
 - [ ] **STEP 2.2: Hotkey & HUD Formation Control**
 - [ ] **STEP 2.3: Smooth Re-formation Steering & Anti-Collision**
 

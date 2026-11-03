@@ -8,6 +8,7 @@ import copy
 from weapons import *
 import numpy as np
 from quadtree import Quadtree, Rect
+from message_manager import MessageManager, TacticalMessage, MessageTopic
 
 vec2 = pg.math.Vector2
 
@@ -44,6 +45,10 @@ class Vehicle(object):
 
         # Picks a random color for target, is used to differentiate visually during simulation
         self.color_target = random_color() 
+
+        # Datalink and messaging
+        self.agent_id = None
+        self.message_bus = None
 
         # Variables related to State Machine
         self.behavior = behavior
@@ -280,6 +285,32 @@ class Vehicle(object):
         except: 
             return None
 
+    def set_message_bus(self, bus, agent_id=None):
+        """Connects this vehicle to the tactical datalink message bus."""
+        self.message_bus = bus
+        if agent_id is not None:
+            self.agent_id = agent_id
+        if self.message_bus is not None and self.agent_id is not None:
+            self.message_bus.register_agent(self.agent_id)
+
+    def send_message(self, recipient_id, topic, payload, current_time=0.0) -> bool:
+        """Transmits a targeted datalink message via the bus."""
+        if self.message_bus is None or self.agent_id is None:
+            return False
+        return self.message_bus.send_message(self.agent_id, recipient_id, topic, payload, current_time)
+
+    def broadcast_message(self, topic, payload, current_time=0.0) -> bool:
+        """Transmits a broadcast datalink message to all network nodes."""
+        if self.message_bus is None or self.agent_id is None:
+            return False
+        return self.message_bus.broadcast(self.agent_id, topic, payload, current_time)
+
+    def poll_messages(self) -> list:
+        """Retrieves and clears all pending messages from this vehicle's datalink inbox."""
+        if self.message_bus is None or self.agent_id is None:
+            return []
+        return self.message_bus.receive_messages(self.agent_id)
+
     def set_debug(self):
         """
         Method to view debug lines . Assists the developer.
@@ -420,6 +451,10 @@ class VehiclePF(object):
 
         # Picks a random color for target, is used to differentiate visually during simulation
         self.color_target = random_color() 
+
+        # Datalink and messaging
+        self.agent_id = None
+        self.message_bus = None
 
         # Variables related to State Machine
         self.behavior = behavior
@@ -657,6 +692,32 @@ class VehiclePF(object):
             return self.target
         except: 
             return None
+
+    def set_message_bus(self, bus, agent_id=None):
+        """Connects this vehicle to the tactical datalink message bus."""
+        self.message_bus = bus
+        if agent_id is not None:
+            self.agent_id = agent_id
+        if self.message_bus is not None and self.agent_id is not None:
+            self.message_bus.register_agent(self.agent_id)
+
+    def send_message(self, recipient_id, topic, payload, current_time=0.0) -> bool:
+        """Transmits a targeted datalink message via the bus."""
+        if self.message_bus is None or self.agent_id is None:
+            return False
+        return self.message_bus.send_message(self.agent_id, recipient_id, topic, payload, current_time)
+
+    def broadcast_message(self, topic, payload, current_time=0.0) -> bool:
+        """Transmits a broadcast datalink message to all network nodes."""
+        if self.message_bus is None or self.agent_id is None:
+            return False
+        return self.message_bus.broadcast(self.agent_id, topic, payload, current_time)
+
+    def poll_messages(self) -> list:
+        """Retrieves and clears all pending messages from this vehicle's datalink inbox."""
+        if self.message_bus is None or self.agent_id is None:
+            return []
+        return self.message_bus.receive_messages(self.agent_id)
 
     def set_debug(self):
         """
@@ -962,6 +1023,18 @@ class LeadingDrone(Vehicle):
 
         return list_positions
 
+    def broadcast_formation_command(self, slots_dict, formation_type="CIRCLE", current_time=0.0):
+        """
+        Transmits tactical formation coordinates over the datalink message bus to all wingmen.
+        """
+        payload = {
+            "formation_type": formation_type,
+            "slots": slots_dict,
+            "leader_pos": (self.location.x, self.location.y),
+            "leader_velocity": (self.velocity.x, self.velocity.y)
+        }
+        return self.broadcast_message("FORMATION_COMMAND", payload, current_time)
+
     def destroyed_legacy(self):
         self.destroyed = True
 
@@ -986,6 +1059,28 @@ class LoyalWingman(Vehicle):
 
     def destroy(self):
         self.destroyed = True
+
+    def process_tactical_messages(self, current_time: float = 0.0):
+        """
+        Polls and processes incoming datalink messages from leader or peers.
+        """
+        messages = self.poll_messages()
+        for msg in messages:
+            if msg.topic == "FORMATION_COMMAND":
+                slots = msg.payload.get("slots", {})
+                my_slot = slots.get(self.agent_id)
+                if my_slot is not None:
+                    target_vec = vec2(my_slot[0], my_slot[1]) if not isinstance(my_slot, vec2) else my_slot
+                    self.set_target(target_vec)
+                self.formation_type = msg.payload.get("formation_type", "CIRCLE")
+            elif msg.topic == "TARGET_ASSIGNMENT":
+                threat = msg.payload.get("threat")
+                role = msg.payload.get("role")
+                if threat is not None:
+                    self.assigned_threat = threat
+                    self.kamikaze_to_attack = threat
+                if role is not None:
+                    self.tactical_role = role
 
     def receive_list_kamikazes(self, kamikazes, quadtree_kamikazes=None):
         self.kamikazes = kamikazes
