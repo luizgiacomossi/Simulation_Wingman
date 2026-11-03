@@ -1,113 +1,198 @@
-# Loyal Wingman Simulator (MUM-T) — Improvement Roadmap & Checklist
+# Loyal Wingman Simulator (MUM-T) — Methodical Master Checklist
 
-This roadmap defines the next technical milestones for the **Simulation_Wingman** multi-UAV combat simulator, supporting research, simulation fidelity, and publication in scientific venues.
+This document is the **systematic, step-by-step implementation plan** for advancing the `Simulation_Wingman` research platform. Each task is self-contained with explicit technical scope, affected files, acceptance criteria, and verification commands, executed strictly one by one.
 
 ---
 
-## 1. Executive Summary & Goals
-
-The simulator has successfully established:
-- Spatial partitioning via **Quadtree** ($O(N \log N)$ complexity).
-- Decoupled **SwarmManager** architecture.
-- Full 14-core headless multiprocessing runner for **PSO** (Particle Swarm Optimization).
-- Glassmorphism **Tactical HUD**, radar minimap, and interactive agent inspector.
-- Adaptive 1:1 window resolution matching laptop displays.
-
-The next phases focus on **Swarm Coordination AI**, **Runtime Control (Dashboard)**, **Ballistic Physics**, and **Large-Scale Monte Carlo Evaluation** for paper publication.
+## Progress Overview
 
 ```mermaid
-flowchart LR
-    Phase1["Phase 1:<br/>Live Dashboard<br/>& Runtime Sliders"] --> Phase2["Phase 2:<br/>Swarm AI & Target<br/>Allocation"]
-    Phase2 --> Phase3["Phase 3:<br/>Ballistics & Evasive<br/>Maneuvers"]
-    Phase3 --> Phase4["Phase 4:<br/>Parametric Sweep<br/>& Monte Carlo"]
-    Phase4 --> Phase5["Phase 5:<br/>Publication Plots<br/>& LaTeX Export"]
+flowchart TD
+    P0["Phase 0: Foundation & Core Refactor [COMPLETED]"] --> P1["Phase 1: Cooperative Target Allocation (Hungarian Algorithm)"]
+    P1 --> P2["Phase 2: Dynamic Formations & Tactical Geometries"]
+    P2 --> P3["Phase 3: Interactive Live Dashboard & Runtime Tuning"]
+    P3 --> P4["Phase 4: Physical Ballistics & Kamikaze Evasion"]
+    P4 --> P5["Phase 5: Monte Carlo Sweeps & LaTeX Paper Assets"]
 ```
 
 ---
 
-## 2. Structured Improvement Checklist
+## Phase 0: Architecture & Foundation Refactor `[COMPLETED]`
 
-### Phase 1: Real-Time Dashboard & Interactive Parameter Tuning
-*Goal: Port and expand the Tkinter multi-process dashboard from Search_Drone_Swarms to allow live parameter tuning without restarting.*
+- [x] **STEP 0.1: Spatial Partitioning via Quadtree**
+  - **Files:** `quadtree.py`, `vehicle.py`, `simulation.py`
+  - **Result:** Replaced $O(N^2)$ checks with $O(N \log N)$ spatial queries for flocking, threat checks, and collision avoidance.
+  - **Commit:** `8ae19b5`
 
-- [ ] **1.1. Multiprocessing Telemetry Pipeline**
-  - [ ] Implement `multiprocessing.Queue` pipeline between `Simulation` and background UI process.
-  - [ ] Send high-frequency telemetry snapshots (simulation time, active units, base HP, FPS, kill counts).
-- [ ] **1.2. Interactive Tkinter Dashboard (`dashboard.py`)**
-  - [ ] Real-time metric indicators (current generation, active run, fitness, mission status).
-  - [ ] Parameter adjustment sliders:
-    - [ ] `distance_chase` (Threat engagement radius: $10 - 1000\text{px}$).
-    - [ ] `distance_formation` (Escort distance from leader: $20 - 400\text{px}$).
-    - [ ] `num_kamikazes` & `kamikaze_speed` multiplier.
-  - [ ] Run history table with exportable iteration logs.
-  - [ ] Embedded Matplotlib live convergence curve (fitness vs. iteration).
+- [x] **STEP 0.2: Decoupled Camera & Viewport (`DisplayManager`)**
+  - **Files:** `display_manager.py`, `simulation.py`
+  - **Result:** Mouse wheel zoom, middle-click pan, center on leader (`C`), reset view (`0`), screen-to-world coordinate translation.
+  - **Commit:** `27a6670`
 
----
+- [x] **STEP 0.3: Telemetry & Metrics Tracking (`ExperimentManager`)**
+  - **Files:** `experiment_manager.py`, `simulation.py`
+  - **Result:** Iteration history tracking, CSV logging (`result.csv`), and safe matplotlib export.
+  - **Commit:** `cb05c28`
 
-### Phase 2: Swarm Coordination AI & Target Allocation
-*Goal: Upgrade individual greedy threat selection to cooperative swarm intelligence.*
+- [x] **STEP 0.4: Profiling & Bottleneck Optimization**
+  - **Files:** `utils.py`, `display_manager.py`, `animation.py`
+  - **Result:** Removed `copy.deepcopy` bottlenecks, pre-scaled sprite rotations, added font caching. Loop speedup of **2.55x**.
+  - **Commit:** `1f0141d`
 
-- [ ] **2.1. Cooperative Target Allocation (Hungarian Algorithm / Auction)**
-  - [ ] Replace greedy closest-threat selection in `ChaseThreatNode` with global cost-matrix solver.
-  - [ ] Formulate bipartite matching: $C_{ij} = \alpha \cdot \text{dist}(\text{Wingman}_i, \text{Threat}_j) + \beta \cdot \text{dist}(\text{Threat}_j, \text{Base})$.
-  - [ ] Prevent redundant targeting (eliminates 3+ wingmen attacking 1 enemy while others penetrate defense).
-- [ ] **2.2. Dynamic Tactical Formations**
-  - [ ] Implement formation switching for `LeadingDrone`:
-    - [ ] Circular/Elliptical escort (current default).
-    - [ ] **V-Formation (Wedge)**: Forward defensive wedge.
-    - [ ] **Line / Wall**: Lateral barrier shielding the protected base.
-    - [ ] **Echelon / Column**: Flank protection during traversal.
-  - [ ] Add HUD toggle hotkeys (`F1`-`F4`) and inspector buttons to switch formations on the fly.
+- [x] **STEP 0.5: Swarm Lifecycle Separation (`SwarmManager`)**
+  - **Files:** `swarm_manager.py`, `simulation.py`, `vehicle.py`
+  - **Result:** Encapsulated multi-UAV combat logic, lifecycle, and mission termination checks into a GUI-agnostic manager.
+  - **Commit:** `9a6057f`
 
----
+- [x] **STEP 0.6: Headless Multi-Core PSO Runner (`headless_runner.py`)**
+  - **Files:** `headless_runner.py`, `main.py`
+  - **Result:** 14-core parallel simulation execution (~46ms per full combat episode), macOS `spawn` safety.
+  - **Commit:** `9a6057f`
 
-### Phase 3: Dynamic Ballistics & Evasive Maneuvers
-*Goal: Transition from instant probabilistic rolls to physical combat interactions.*
+- [x] **STEP 0.7: Modern Tactical HUD & Agent Inspector (`GUIManager`)**
+  - **Files:** `gui_manager.py`, `display_manager.py`, `simulation.py`
+  - **Result:** Glassmorphism telemetry card, interactive radar minimap, clickable in-world agent selection with live AI status.
+  - **Commit:** `92aec49`
 
-- [ ] **3.1. Physical Projectile & Directed Weapon Systems**
-  - [ ] Model physical bullet/missile kinematic entities with finite velocities and lifetime.
-  - [ ] Add visual tracers for Freezing beams and Vaporizer railguns.
-  - [ ] Implement Quadtree raycast / sphere collision checks for projectile interception.
-- [ ] **3.2. Kamikaze Evasive Behaviors**
-  - [ ] Add threat perception sensor to hostile kamikazes.
-  - [ ] Implement evasion steering: lateral jinking maneuvers when wingmen are within firing range.
-  - [ ] Add decoy deployment or feint attacks against the leading drone to draw escorts away from base.
+- [x] **STEP 0.8: Native Laptop Resolution & 1:1 World Adaptation**
+  - **Files:** `constants.py`, `display_manager.py`, `gui_manager.py`, `swarm_manager.py`
+  - **Result:** Auto-detection of laptop display ($1658 \times 1017$), 1:1 world fill with zero letterboxing, dynamic window resizing.
+  - **Commit:** `ae9a3d6`
 
 ---
 
-### Phase 4: Automated Parametric Sweeps & Monte Carlo Validation
-*Goal: Leverage the 14-core headless runner for exhaustive sensitivity analysis and thesis experiments.*
+## Phase 1: Cooperative Target Allocation (Hungarian Algorithm)
 
-- [ ] **4.1. Parametric Grid-Search Runner (`sweep_runner.py`)**
-  - [ ] Matrix testing across independent variables:
-    - Escort swarm size: $N \in [5, 10, 15, 20, 25]$.
-    - Threat count: $M \in [2, 4, 6, 8, 12, 16]$.
-    - Engagement radius: $R_{\text{chase}} \in [100, 300, 500, 700, 900]$.
-  - [ ] Monte Carlo execution with multiple random seeds ($K=30$ runs per configuration) for statistical significance.
-- [ ] **4.2. Statistical Aggregation**
-  - [ ] Export consolidated CSV with confidence intervals, base survival probability, and mean interception latency.
+*Problem: Currently, wingmen pick threats independently using a greedy heuristic. Multiple wingmen frequently chase the same kamikaze, leaving other lanes unguarded.*
+
+- [ ] **STEP 1.1: Threat Priority & Global Cost Matrix Formulation**
+  - **Files to modify:** `decision_making.py`, `swarm_manager.py`
+  - **Scope:** 
+    - Construct an $M \times N$ cost matrix where $M = \text{number of active Loyal Wingmen}$ and $N = \text{number of active Kamikazes}$.
+    - Cost function: $C_{ij} = w_d \cdot \|\mathbf{p}_{\text{wingman}, i} - \mathbf{p}_{\text{kamikaze}, j}\| + w_b \cdot \|\mathbf{p}_{\text{kamikaze}, j} - \mathbf{p}_{\text{base}}\| - w_w \cdot \text{ammo}_i$.
+  - **Acceptance Test:** Test script verifying that matrix computes valid non-negative costs and penalizes threats close to the base.
+
+- [ ] **STEP 1.2: Hungarian Algorithm (Munkres / Linear Sum Assignment) Integration**
+  - **Files to modify:** `swarm_manager.py`, `decision_making.py`
+  - **Scope:**
+    - Use `scipy.optimize.linear_sum_assignment` (with pure-Python fallback) to solve the optimal assignment in $O(N^3)$ every $T_{\text{reassign}}$ interval (e.g., every 0.25 seconds or when threats change).
+    - Assign unique target handles to each wingman's behavior tree.
+  - **Acceptance Test:** Unit test with 4 wingmen and 4 kamikazes verifying each wingman receives a distinct target with zero duplicate targeting.
+
+- [ ] **STEP 1.3: Role Specialization (Interceptors vs. Close Escorts)**
+  - **Files to modify:** `decision_making.py`, `vehicle.py`
+  - **Scope:**
+    - Dynamically partition the swarm: 60% assigned as forward interceptors, 40% reserved as close-in escorts around the Leading Drone and Protected Area.
+    - If no threats remain in an interceptor's sector, automatically fall back into escort formation.
+  - **Acceptance Test:** Simulation check verifying that at least 2 wingmen always maintain defensive escort radius around the leader.
+
+- [ ] **STEP 1.4: Comparative Verification Benchmark (Greedy vs. Hungarian)**
+  - **Files to create/modify:** `test_allocation.py`, `experiment_manager.py`
+  - **Scope:**
+    - Run 50 headless episodes with Greedy targeting vs. 50 episodes with Hungarian targeting.
+    - Measure base survival rate, kill latency, and redundant target locks.
+  - **Acceptance Test:** Automated report showing statistically significant reduction in duplicate engagements and increase in base survival.
 
 ---
 
-### Phase 5: Scientific Reporting & Publication Assets
-*Goal: Produce publication-ready figures for LaTeX/Overleaf integration.*
+## Phase 2: Dynamic Formations & Tactical Geometries
 
-- [ ] **5.1. Publication Plotting Module (`plot_generator.py`)**
-  - [ ] IEEE/AIAA style matplotlib theme (serif fonts, vector SVG/PDF export).
-  - [ ] Convergence plots with shaded $\pm 1\sigma$ standard deviation bands.
-  - [ ] 2D Heatmaps of Base Survival Rate vs. Swarm Density.
-  - [ ] Boxplots of mission completion time under varying threat levels.
-- [ ] **5.2. Automated LaTeX Summary Table Generator**
-  - [ ] Script to output ready-to-paste `\begin{table}` code containing experiment results.
+- [ ] **STEP 2.1: Formation Geometry Engine in `LeadingDrone`**
+  - **Files to modify:** `vehicle.py`, `swarm_manager.py`
+  - **Scope:**
+    - Implement analytical formation coordinate generators:
+      1. **Circle / Orbit** (current default): Radial equidistant ring.
+      2. **V-Formation (Wedge)**: Symmetrical swept-back escort angles ($45^\circ$).
+      3. **Defensive Wall (Line)**: Linear barrier perpendicular to threat vector.
+      4. **Echelon (Flank)**: Stepped diagonal column protecting the leader's flank.
+  - **Acceptance Test:** Mathematical validation that slot positions maintain proper separation distance and center on leader.
+
+- [ ] **STEP 2.2: Hotkey & HUD Formation Control**
+  - **Files to modify:** `gui_manager.py`, `simulation.py`
+  - **Scope:**
+    - Map keys `1`, `2`, `3`, `4` to switch formations dynamically during runtime.
+    - Display current formation badge on the Tactical HUD card and Leader Inspector.
+  - **Acceptance Test:** Keyboard test verifying formation transitions cleanly without runtime exceptions.
+
+- [ ] **STEP 2.3: Smooth Re-formation Steering & Anti-Collision**
+  - **Files to modify:** `vehicle.py`
+  - **Scope:**
+    - Implement smooth waypoint transition so drones don't cross paths violently when switching between formations.
+    - Quadtree collision avoidance during formation transitions.
+  - **Acceptance Test:** Verify zero mid-air collisions between wingmen during rapid formation switches.
 
 ---
 
-## 3. Recommended Implementation Order
+## Phase 3: Interactive Real-Time Dashboard (`dashboard.py`)
 
-| Priority | Task | Complexity | Impact |
-| :--- | :--- | :---: | :---: |
-| **High** | **Phase 2.1: Target Allocation (Hungarian Algorithm)** | Medium | Fixes critical operational redundancy in defense |
-| **High** | **Phase 1: Interactive Dashboard (`dashboard.py`)** | Medium | Instant visual experimentation and demo tool |
-| **Medium**| **Phase 4: Parametric Sweeps & Monte Carlo** | Low/Medium | Directly produces empirical data for the PhD thesis |
-| **Medium**| **Phase 2.2: Dynamic Formations (V, Wall, Escort)** | Medium | Enhances tactical MUM-T realism |
-| **Low** | **Phase 3: Ballistics & Evasion** | High | Visual fidelity and complex micro-mechanics |
+- [ ] **STEP 3.1: Thread-Safe Inter-Process Communication (IPC)**
+  - **Files to create/modify:** `dashboard.py`, `simulation.py`
+  - **Scope:**
+    - Set up bidirectional `multiprocessing.Queue` or `Pipe` between Pygame and a secondary Tkinter process.
+    - Outbound queue: simulation stats (time, FPS, units alive, base HP, current quality).
+    - Inbound queue: parameter mutations requested by user sliders.
+  - **Acceptance Test:** IPC test demonstrating sub-5ms message roundtrip without blocking the 60Hz Pygame loop.
+
+- [ ] **STEP 3.2: Tkinter Parameter Dashboard with Live Sliders**
+  - **Files to modify:** `dashboard.py`
+  - **Scope:**
+    - Create clean native desktop UI with sliders:
+      - `distance_chase`: Slider $[50 - 1000]\text{px}$.
+      - `distance_formation`: Slider $[30 - 300]\text{px}$.
+      - `num_kamikazes`: Slider $[1 - 12]$ (triggers dynamic reinforcements).
+      - `accelerated_factor`: Slider $[1 - 20]\text{x}$.
+  - **Acceptance Test:** Moving a slider immediately updates the parameter in the active Pygame simulation.
+
+- [ ] **STEP 3.3: Embedded Real-Time Telemetry & Matplotlib Graphs**
+  - **Files to modify:** `dashboard.py`
+  - **Scope:**
+    - Embed `FigureCanvasTkAgg` in Tkinter window.
+    - Live-updating plot of quality/fitness and base HP over iterations.
+    - Export button to save live telemetry table directly to CSV.
+  - **Acceptance Test:** Dashboard renders updating graph at 10Hz without GUI freezing.
+
+---
+
+## Phase 4: Dynamic Ballistics & Kamikaze Evasion
+
+- [ ] **STEP 4.1: Projectile Kinematics & Visual Tracers**
+  - **Files to create/modify:** `weapons.py`, `swarm_manager.py`, `vehicle.py`
+  - **Scope:**
+    - Model physical projectile instances (`Bullet`, `LaserBolt`, `Missile`) with finite speed, range, and lifetime.
+    - Replace instant deletion with ballistic time-of-flight and Quadtree hit-box detection.
+  - **Acceptance Test:** Firing weapons generates visible projectiles that travel and collide with threats.
+
+- [ ] **STEP 4.2: Kamikaze Evasive Steering & Jinking**
+  - **Files to modify:** `state_machine.py`, `vehicle.py`
+  - **Scope:**
+    - Add incoming threat sensing to hostile drones.
+    - When a wingman is within $150\text{px}$ and aligned on threat bearing, inject perpendicular evasion vector $\mathbf{v}_{\text{jink}}$.
+  - **Acceptance Test:** Kamikazes perform lateral avoidance maneuvers when targeted.
+
+---
+
+## Phase 5: Monte Carlo Sweeps & Publication Assets (PhD/Paper)
+
+- [ ] **STEP 5.1: Automated Matrix Sweep Orchestrator (`sweep_runner.py`)**
+  - **Files to create:** `sweep_runner.py`
+  - **Scope:**
+    - Run exhaustive grid of experiments using 14-core parallel runner:
+      - Wingman count $N \in [5, 10, 15, 20]$.
+      - Threat count $M \in [2, 4, 6, 8, 10]$.
+      - Seeds $S = 30$ per cell (Total: $4 \times 5 \times 30 = 600$ full combat episodes).
+  - **Acceptance Test:** Script executes 600 episodes in under 30 seconds and outputs `monte_carlo_results.csv`.
+
+- [ ] **STEP 5.2: Publication Figure Generator (`plot_generator.py`)**
+  - **Files to create:** `plot_generator.py`
+  - **Scope:**
+    - High-resolution vector exports (PDF, SVG, 300 DPI PNG) formatted with IEEE/AIAA styling.
+    - Heatmap: Base Survival Probability vs. $(N, M)$.
+    - Boxplot: Defense Duration and Interception Range.
+    - Shaded Area Plot: PSO Convergence with $\pm 1\sigma$ confidence bands.
+  - **Acceptance Test:** Script runs and generates all `.pdf` figures in `experiments/figures/`.
+
+- [ ] **STEP 5.3: Automated LaTeX Summary Table Generator**
+  - **Files to modify:** `plot_generator.py`
+  - **Scope:**
+    - Output ready-to-paste `\begin{table} ... \end{table}` LaTeX snippets with mean, std dev, and p-values.
+  - **Acceptance Test:** Validated LaTeX snippet compiles error-free in Overleaf.
