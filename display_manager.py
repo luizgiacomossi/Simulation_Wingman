@@ -40,15 +40,16 @@ class DisplayManager(object):
         # World surface on which the entire simulation is drawn before viewport scaling
         self.world_surface = pygame.Surface((self.world_width, self.world_height), depth=24)
 
-        # Responsive zoom: fit_zoom fills 100% of the window at max zoom out (no black voids)
+        # Responsive zoom limits
         fit_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height)
-        self.min_zoom = fit_zoom
+        self.min_zoom = fit_zoom  # minimum zoom out stops when the entire expanded world fills the screen
         self.max_zoom = 4.0
-        self.zoom_level = fit_zoom
+        self.zoom_level = 1.0     # Starts at standard 1.0x scale (exact same view angle/drone size as before)
         self.offset = pygame.math.Vector2(
-            (self.screen_width - self.world_width * self.zoom_level) / 2,
-            (self.screen_height - self.world_height * self.zoom_level) / 2
+            self.screen_width / 2 - (self.world_width / 2) * self.zoom_level,
+            self.screen_height / 2 - (self.world_height / 2) * self.zoom_level
         )
+        self.clamp_offset()
 
         # Panning state
         self.is_panning = False
@@ -135,13 +136,12 @@ class DisplayManager(object):
         self.zoom_level = max(self.min_zoom, min(self.max_zoom, self.zoom_level))
         self.clamp_offset()
 
-    def reset_view(self):
-        """Resets camera to fit the full world comfortably inside the window."""
-        fit_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height)
-        self.zoom_level = fit_zoom
+    def reset_view(self, zoom=1.0):
+        """Resets camera to standard 1.0x view centered on the middle of the world."""
+        self.zoom_level = max(self.min_zoom, min(self.max_zoom, zoom))
         self.offset = pygame.math.Vector2(
-            (self.screen_width - self.world_width * self.zoom_level) / 2,
-            (self.screen_height - self.world_height * self.zoom_level) / 2
+            self.screen_width / 2 - (self.world_width / 2) * self.zoom_level,
+            self.screen_height / 2 - (self.world_height / 2) * self.zoom_level
         )
         self.clamp_offset()
 
