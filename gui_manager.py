@@ -194,8 +194,13 @@ class GUIManager:
             chase_dist = getattr(self.selected_agent, 'distance_chase', 300)
             pg.draw.circle(world_surface, (50, 200, 255), (int(loc.x), int(loc.y)), int(chase_dist), width=1)
         elif self.selected_type == "Leading Drone":
-            formation_dist = getattr(self.selected_agent, 'distance_formation', DISTANCE_LEADER)
-            pg.draw.circle(world_surface, (255, 220, 80), (int(loc.x), int(loc.y)), int(formation_dist), width=1)
+            # Highlight active formation geometry in tactical gold for selected leader
+            if hasattr(self.selected_agent, 'draw_formation_guide'):
+                num_sw = len(getattr(simulation.swarm_manager, 'swarm', []))
+                self.selected_agent.draw_formation_guide(world_surface, num_drones=num_sw, color=(255, 220, 80), width=1)
+            else:
+                formation_dist = getattr(self.selected_agent, 'distance_formation', DISTANCE_LEADER)
+                pg.draw.circle(world_surface, (255, 220, 80), (int(loc.x), int(loc.y)), int(formation_dist), width=1)
 
     def draw_screen_hud(self, screen, simulation, display_manager, time_running: float, history):
         """Renders the complete modern tactical glassmorphism HUD directly onto the screen."""

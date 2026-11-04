@@ -907,6 +907,28 @@ class LeadingDrone(Vehicle):
             self.current_formation_name = self.formation_manager.active_strategy_name
         return ok
 
+    def draw_formation_guide(self, surface, num_drones=NUM_DRONES, color=(160, 225, 175), width=2):
+        """
+        Renders the active formation's dynamic geometry (Circle, Wedge, Wall, Echelon)
+        and target slot reticles around the leader drone.
+        """
+        if hasattr(self, 'formation_manager') and surface is not None:
+            slots = self.formation_manager.compute_formation_slots(
+                leader_pos=self.location,
+                leader_heading=self.rotation,
+                num_drones=num_drones,
+                spacing=self.distance_formation
+            )
+            self.formation_manager.draw_formation_guide(
+                surface=surface,
+                leader_pos=self.location,
+                leader_heading=self.rotation,
+                slots=slots,
+                spacing=self.distance_formation,
+                color=color,
+                width=width
+            )
+
     def set_formation_2rings(self, num_drones = NUM_DRONES):
         '''
             This method returns the positions for the loyal wingman surrounding the leading drone

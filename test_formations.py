@@ -149,9 +149,31 @@ def test_rapid_reformation_anti_collision_simulation():
     assert min_recorded_distance >= AVOID_DISTANCE, f"Separation dropped below collision avoidance distance: {min_recorded_distance:.1f}px < {AVOID_DISTANCE}px"
     print("✓ Zero mid-air collisions occurred during aggressive tactical re-formations.")
 
+def test_dynamic_formation_guide_rendering():
+    print("=== [TEST 5] Testing Dynamic Formation Guide Rendering ===")
+    pg.init()
+    surface = pg.Surface((1200, 900))
+
+    sm = SwarmManager()
+    sm.create_swarm(num_loyal=6, num_kamikazes=0, distance_formation=100)
+
+    for form_name in ["CIRCLE", "WEDGE", "WALL", "ECHELON"]:
+        ok = sm.set_formation_strategy(form_name)
+        assert ok is True
+        assert sm.leadingdrone.current_formation_name == form_name
+
+        # Ensure draw_formation_guide executes cleanly onto surface
+        sm.leadingdrone.draw_formation_guide(surface, num_drones=len(sm.swarm))
+
+        # Ensure full swarm draw renders the dynamic formation guide
+        sm.draw(surface)
+
+    print("✓ Dynamic formation guide rendering verified across all 4 tactical formations.")
+
 if __name__ == "__main__":
     test_analytical_geometries()
     test_formation_manager_and_strategy_switching()
     test_hungarian_optimal_slot_assignment()
     test_rapid_reformation_anti_collision_simulation()
+    test_dynamic_formation_guide_rendering()
     print("\n★★★ ALL FORMATION ENGINE & ANTI-COLLISION TESTS PASSED! ★★★")

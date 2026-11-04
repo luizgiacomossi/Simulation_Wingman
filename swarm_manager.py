@@ -354,14 +354,10 @@ class SwarmManager(object):
         if surface is None:
             return
 
-        # Draw leader
+        # Draw leader and dynamic formation guide
         if self.leadingdrone is not None:
-            pygame.draw.circle(
-                surface, (200, 250, 200),
-                self.leadingdrone.get_position(),
-                radius=int(self.distance_formation),
-                width=3
-            )
+            if hasattr(self.leadingdrone, 'draw_formation_guide'):
+                self.leadingdrone.draw_formation_guide(surface, num_drones=len(self.swarm))
             self.leadingdrone.draw(surface)
             if display_manager is not None:
                 img = display_manager.get_rendered_text(display_manager.font20, 'Leading Drone', LIGHT_BLUE)
