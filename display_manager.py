@@ -58,11 +58,16 @@ class DisplayManager(object):
         # Text rendering surface cache
         self._text_cache = {}
 
-        # Background texture (repeated / tiled across the extended world at native 1:1 resolution)
+        # Background texture (tiled at a balanced macro-terrain scale to avoid micro-pattern noise)
         self.background_image = None
         try:
-            tile = pygame.image.load("models/texture/camouflage.png").convert()
-            tile_w, tile_h = tile.get_size()
+            raw_tile = pygame.image.load("models/texture/camouflage.png").convert()
+            # Scale each tile up ~3x (768x768) so terrain patches look natural and broad
+            tile_scale = 3
+            tile_w = raw_tile.get_width() * tile_scale
+            tile_h = raw_tile.get_height() * tile_scale
+            tile = pygame.transform.scale(raw_tile, (tile_w, tile_h))
+
             tiled_bg = pygame.Surface((self.world_width, self.world_height), depth=24)
             for tx in range(0, self.world_width, tile_w):
                 for ty in range(0, self.world_height, tile_h):
