@@ -2,12 +2,10 @@ import sys, pygame, os
 from constants import *
 import random 
 import copy
-from utils import FlowField
 from obstacle import Obstacles
 from simulation import Simulation, ScreenSimulation, Rate_Simulation, ProcessorUserInput
 from vehicle import LeadingDrone, LoyalWingman, Kamikaze
 from state_machine import FiniteStateMachine, SeekState, RandomWalkState
-from grid import GridField
 
 os.environ['SDL_VIDEO_CENTERED'] = '1' 
 vec2 = pygame.math.Vector2
@@ -86,10 +84,6 @@ def main():
     obst.generate_obstacles()
     # To generate obstacles, uncomment following command
     #list_obst = obst.get_coordenates()
-
-    #grid
-    #grid_field = GridField(RESOLUTION)
-    #grid_field.draw(screen)
 
     simulation = Simulation(screenSimulation)
     # para testar o pso, depois retirar esse comentario !!!!!!
