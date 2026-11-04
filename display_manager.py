@@ -40,15 +40,15 @@ class DisplayManager(object):
         # World surface on which the entire simulation is drawn before viewport scaling
         self.world_surface = pygame.Surface((self.world_width, self.world_height), depth=24)
 
-        # Responsive zoom to comfortably fit world inside the laptop window
+        # Responsive zoom: fit_zoom fills 100% of the window at max zoom out (no black voids)
         fit_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height)
-        self.zoom_level = min(1.0, fit_zoom)
+        self.min_zoom = fit_zoom
+        self.max_zoom = 4.0
+        self.zoom_level = fit_zoom
         self.offset = pygame.math.Vector2(
             (self.screen_width - self.world_width * self.zoom_level) / 2,
             (self.screen_height - self.world_height * self.zoom_level) / 2
         )
-        self.min_zoom = fit_zoom * 0.4
-        self.max_zoom = 4.0
 
         # Panning state
         self.is_panning = False
@@ -131,13 +131,14 @@ class DisplayManager(object):
         self.size = (self.screen_width, self.screen_height)
         self.screen = pygame.display.set_mode(self.size, pygame.RESIZABLE | pygame.SRCALPHA)
         fit_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height)
-        self.min_zoom = fit_zoom * 0.4
+        self.min_zoom = fit_zoom
+        self.zoom_level = max(self.min_zoom, min(self.max_zoom, self.zoom_level))
         self.clamp_offset()
 
     def reset_view(self):
-        """Resets camera to fit the laptop screen comfortably."""
+        """Resets camera to fit the full world comfortably inside the window."""
         fit_zoom = min(self.screen_width / self.world_width, self.screen_height / self.world_height)
-        self.zoom_level = min(1.0, fit_zoom)
+        self.zoom_level = fit_zoom
         self.offset = pygame.math.Vector2(
             (self.screen_width - self.world_width * self.zoom_level) / 2,
             (self.screen_height - self.world_height * self.zoom_level) / 2

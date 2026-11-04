@@ -19,9 +19,10 @@ def get_auto_screen_resolution(margin_w=70, margin_h=100):
     return 1600, 900
 
 SCREEN_WIDTH, SCREEN_HEIGHT = get_auto_screen_resolution()
-# World Physics Parameters (1:1 with laptop display)
-WORLD_WIDTH = SCREEN_WIDTH
-WORLD_HEIGHT = SCREEN_HEIGHT
+# World Physics Parameters (Expanded tactical airspace: 2.0x laptop resolution)
+WORLD_SCALE = 2.0
+WORLD_WIDTH = int(SCREEN_WIDTH * WORLD_SCALE)
+WORLD_HEIGHT = int(SCREEN_HEIGHT * WORLD_SCALE)
 PIX2M = 0.01  # factor to convert from pixels to meters
 M2PIX = 100.0  # factor to convert from meters to pixels
 NUM_DRONES = 10# Number of simultaneous drones
