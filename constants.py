@@ -19,8 +19,8 @@ def get_auto_screen_resolution(margin_w=70, margin_h=100):
     return 1600, 900
 
 SCREEN_WIDTH, SCREEN_HEIGHT = get_auto_screen_resolution()
-# World Physics Parameters (Expanded tactical airspace: 2.0x laptop resolution)
-WORLD_SCALE = 2.0
+# World Physics Parameters (Tactical airspace: 1.6x laptop resolution, 20% more compact)
+WORLD_SCALE = 1.6
 WORLD_WIDTH = int(SCREEN_WIDTH * WORLD_SCALE)
 WORLD_HEIGHT = int(SCREEN_HEIGHT * WORLD_SCALE)
 PIX2M = 0.01  # factor to convert from pixels to meters
