@@ -16,7 +16,7 @@ class GUIManager:
     - Strict semantic MIL-STD color palette (slate neutral canvas; color reserved for IFF & alerts)
     - Crisp rectangular MFD (Multi-Function Display) inspector and radar scope
     - Tabular monospace telemetry without verbose marketing labels or decorative glyphs
-    - Sub-millisecond rendering overhead with zero jitter
+    - Legible, comfortable typography scale for tactical operational displays
     """
     def __init__(self):
         self.visible = True
@@ -25,17 +25,17 @@ class GUIManager:
         self.selected_index = -1
         self.pulse_phase = 0.0
 
-        # UI Layout Coordinates
-        self.top_bar_height = 28
-        self.bottom_bar_height = 24
-        self.panel_width = 300
+        # UI Layout Coordinates (scaled for optimal readability)
+        self.top_bar_height = 32
+        self.bottom_bar_height = 26
+        self.panel_width = 340
         self.screen_width = 1600
         self.screen_height = 900
 
         self.minimap_width = self.panel_width
-        self.minimap_height = int(self.minimap_width * (WORLD_HEIGHT / WORLD_WIDTH))  # ~ 142px
+        self.minimap_height = int(self.minimap_width * (WORLD_HEIGHT / WORLD_WIDTH))  # ~ 161px
         self.inspector_width = self.panel_width
-        self.inspector_height = 300
+        self.inspector_height = 340
 
         self.update_layout(self.screen_width, self.screen_height)
 
@@ -45,16 +45,16 @@ class GUIManager:
         self.is_hovering_close = False
         self._current_cursor = None
 
-        # Fonts (cached technical typography)
+        # Fonts (cached technical typography with enhanced readability)
         pg.font.init()
         # Clean technical sans for labels & headers
-        self.font_header = pg.font.SysFont("Helvetica, Arial, sans-serif", 13, bold=True)
-        self.font_label = pg.font.SysFont("Helvetica, Arial, sans-serif", 11, bold=True)
-        self.font_meta = pg.font.SysFont("Helvetica, Arial, sans-serif", 11)
+        self.font_header = pg.font.SysFont("Helvetica, Arial, sans-serif", 15, bold=True)
+        self.font_label = pg.font.SysFont("Helvetica, Arial, sans-serif", 13, bold=True)
+        self.font_meta = pg.font.SysFont("Helvetica, Arial, sans-serif", 12)
         # Tabular figures monospace for all coordinates, values, and timers
-        self.font_mono = pg.font.SysFont("Courier, monospace", 12, bold=True)
-        self.font_mono_small = pg.font.SysFont("Courier, monospace", 11)
-        self.font_key = pg.font.SysFont("Courier, monospace", 10, bold=True)
+        self.font_mono = pg.font.SysFont("Courier, monospace", 13, bold=True)
+        self.font_mono_small = pg.font.SysFont("Courier, monospace", 12)
+        self.font_key = pg.font.SysFont("Courier, monospace", 11, bold=True)
 
     def update_layout(self, screen_w, screen_h):
         """Updates layout bounds to match the current screen dimensions."""
@@ -68,7 +68,7 @@ class GUIManager:
         # Right Rail Docked Panels (crisp margin: 12px from right, below top bar)
         panel_x = screen_w - self.panel_width - 12
         self.inspector_rect = pg.Rect(panel_x, self.top_bar_height + 10, self.inspector_width, self.inspector_height)
-        self.inspector_close_rect = pg.Rect(self.inspector_rect.right - 22, self.inspector_rect.top + 6, 16, 16)
+        self.inspector_close_rect = pg.Rect(self.inspector_rect.right - 24, self.inspector_rect.top + 6, 18, 18)
 
         # Radar Scope docked at bottom-right above bottom bar
         radar_y = screen_h - self.bottom_bar_height - self.minimap_height - 10
@@ -200,7 +200,7 @@ class GUIManager:
                 (56, 189, 248) if self.selected_type == "Loyal Wingman" else \
                 (248, 113, 113) if self.selected_type == "Kamikaze Threat" else (74, 222, 128)
 
-        # Technical 4-corner targeting box (no cartoon circle or heavy pulse)
+        # Technical 4-corner targeting box
         r = 18
         bx, by = int(loc.x), int(loc.y)
         d = 6
@@ -236,7 +236,6 @@ class GUIManager:
     def draw_screen_hud(self, screen, simulation, display_manager, time_running: float, history):
         """Renders the complete operational command console."""
         if not self.visible:
-            # Minimal unobtrusive indicator in corner
             tip = self.font_mono_small.render("[H] HUD TOGGLE", True, (100, 116, 139))
             screen.blit(tip, (12, 10))
             return
@@ -273,8 +272,8 @@ class GUIManager:
         pg.draw.rect(screen, (10, 14, 22), self.top_bar_rect)
         pg.draw.line(screen, (30, 41, 59), (0, self.top_bar_height - 1), (self.screen_width, self.top_bar_height - 1), 1)
 
-        x = 14
-        y_text = 6
+        x = 16
+        y_text = 7
 
         # 1. Status Indicator
         is_paused = getattr(simulation, 'is_paused', False)
@@ -283,12 +282,12 @@ class GUIManager:
         t_st_lbl = self.font_label.render("SIM:", True, (100, 116, 139))
         t_st_val = self.font_mono.render(st_text, True, st_col)
         screen.blit(t_st_lbl, (x, y_text + 1))
-        x += t_st_lbl.get_width() + 4
+        x += t_st_lbl.get_width() + 5
         screen.blit(t_st_val, (x, y_text))
-        x += t_st_val.get_width() + 16
+        x += t_st_val.get_width() + 18
 
         # Pipe separator
-        pg.draw.line(screen, (30, 41, 59), (x - 8, 5), (x - 8, self.top_bar_height - 6), 1)
+        pg.draw.line(screen, (30, 41, 59), (x - 9, 6), (x - 9, self.top_bar_height - 7), 1)
 
         # 2. Rate & Sim Time
         speed = f"{simulation.accelerated_factor:.1f}x" if not is_paused else "0.0x"
@@ -299,11 +298,11 @@ class GUIManager:
         t_time_lbl = self.font_label.render("TIME:", True, (100, 116, 139))
         t_time_val = self.font_mono.render(f"{time_str} ({speed})", True, (241, 245, 249))
         screen.blit(t_time_lbl, (x, y_text + 1))
-        x += t_time_lbl.get_width() + 4
+        x += t_time_lbl.get_width() + 5
         screen.blit(t_time_val, (x, y_text))
-        x += t_time_val.get_width() + 16
+        x += t_time_val.get_width() + 18
 
-        pg.draw.line(screen, (30, 41, 59), (x - 8, 5), (x - 8, self.top_bar_height - 6), 1)
+        pg.draw.line(screen, (30, 41, 59), (x - 9, 6), (x - 9, self.top_bar_height - 7), 1)
 
         # 3. Base Integrity (inline compact segmented bar)
         pa_life = simulation.protected_area.life if simulation.protected_area else 0
@@ -314,8 +313,8 @@ class GUIManager:
         screen.blit(t_base_lbl, (x, y_text + 1))
         x += t_base_lbl.get_width() + 6
 
-        bar_w = 64
-        bar_h = 8
+        bar_w = 70
+        bar_h = 10
         bar_y = y_text + 4
         pg.draw.rect(screen, (15, 23, 42), (x, bar_y, bar_w, bar_h))
         pg.draw.rect(screen, (51, 65, 85), (x, bar_y, bar_w, bar_h), 1)
@@ -326,9 +325,9 @@ class GUIManager:
 
         t_hp_pct = self.font_mono.render(f"{pa_life:3.0f}%", True, hp_col)
         screen.blit(t_hp_pct, (x, y_text))
-        x += t_hp_pct.get_width() + 16
+        x += t_hp_pct.get_width() + 18
 
-        pg.draw.line(screen, (30, 41, 59), (x - 8, 5), (x - 8, self.top_bar_height - 6), 1)
+        pg.draw.line(screen, (30, 41, 59), (x - 9, 6), (x - 9, self.top_bar_height - 7), 1)
 
         # 4. Swarm Escorts & Hostiles
         alive_escorts = simulation.get_number_running_simultations()
@@ -336,11 +335,11 @@ class GUIManager:
         t_esc_lbl = self.font_label.render("ESCORTS:", True, (100, 116, 139))
         t_esc_val = self.font_mono.render(f"{alive_escorts}/{total_escorts}", True, (56, 189, 248))
         screen.blit(t_esc_lbl, (x, y_text + 1))
-        x += t_esc_lbl.get_width() + 4
+        x += t_esc_lbl.get_width() + 5
         screen.blit(t_esc_val, (x, y_text))
-        x += t_esc_val.get_width() + 16
+        x += t_esc_val.get_width() + 18
 
-        pg.draw.line(screen, (30, 41, 59), (x - 8, 5), (x - 8, self.top_bar_height - 6), 1)
+        pg.draw.line(screen, (30, 41, 59), (x - 9, 6), (x - 9, self.top_bar_height - 7), 1)
 
         # 5. Threats
         act_threats = len(simulation.kamikazes)
@@ -348,11 +347,11 @@ class GUIManager:
         t_th_lbl = self.font_label.render("THREATS:", True, (100, 116, 139))
         t_th_val = self.font_mono.render(f"{act_threats} ACT | {kia_threats} KIA", True, (248, 113, 113) if act_threats > 0 else (148, 163, 184))
         screen.blit(t_th_lbl, (x, y_text + 1))
-        x += t_th_lbl.get_width() + 4
+        x += t_th_lbl.get_width() + 5
         screen.blit(t_th_val, (x, y_text))
-        x += t_th_val.get_width() + 16
+        x += t_th_val.get_width() + 18
 
-        pg.draw.line(screen, (30, 41, 59), (x - 8, 5), (x - 8, self.top_bar_height - 6), 1)
+        pg.draw.line(screen, (30, 41, 59), (x - 9, 6), (x - 9, self.top_bar_height - 7), 1)
 
         # 6. Leader & Formation
         leader_alive = simulation.leadingdrone is not None and getattr(simulation.leadingdrone, 'destroyed', False) is not True
@@ -360,14 +359,14 @@ class GUIManager:
         t_lead_lbl = self.font_label.render("LEADER:", True, (100, 116, 139))
         t_lead_val = self.font_mono.render(f"{'ACTIVE' if leader_alive else 'MIA'} [{form_name}]", True, (74, 222, 128) if leader_alive else (248, 113, 113))
         screen.blit(t_lead_lbl, (x, y_text + 1))
-        x += t_lead_lbl.get_width() + 4
+        x += t_lead_lbl.get_width() + 5
         screen.blit(t_lead_val, (x, y_text))
-        x += t_lead_val.get_width() + 16
+        x += t_lead_val.get_width() + 18
 
         # 7. Iteration / Episode (Far Right)
         iter_str = f"EPISODE #{history.iterations + 1}  |  ZOOM {display_manager.zoom_level:.2f}x"
         t_iter = self.font_mono_small.render(iter_str, True, (100, 116, 139))
-        screen.blit(t_iter, (self.screen_width - t_iter.get_width() - 14, y_text + 1))
+        screen.blit(t_iter, (self.screen_width - t_iter.get_width() - 16, y_text + 1))
 
     def _draw_bottom_toolbar(self, screen, simulation):
         """
@@ -390,20 +389,20 @@ class GUIManager:
             ("H", "Toggle HUD")
         ]
 
-        cx = 14
+        cx = 16
         y_text = self.bottom_bar_rect.top + 5
 
         for key, label in shortcuts:
             k_surf = self.font_key.render(f"[{key}]", True, (241, 245, 249))
             l_surf = self.font_meta.render(label, True, (100, 116, 139))
             screen.blit(k_surf, (cx, y_text))
-            cx += k_surf.get_width() + 3
+            cx += k_surf.get_width() + 4
             screen.blit(l_surf, (cx, y_text))
-            cx += l_surf.get_width() + 14
+            cx += l_surf.get_width() + 16
 
             # Subtle dot separator
             if key != shortcuts[-1][0]:
-                pg.draw.circle(screen, (51, 65, 85), (cx - 7, y_text + 6), 1)
+                pg.draw.circle(screen, (51, 65, 85), (cx - 8, y_text + 7), 1)
 
     def _draw_minimap_radar(self, screen, simulation, display_manager):
         """
@@ -413,11 +412,11 @@ class GUIManager:
         rx, ry, rw, rh = self.minimap_rect.x, self.minimap_rect.y, self.minimap_rect.width, self.minimap_rect.height
 
         # Header bar
-        header_h = 20
+        header_h = 24
         pg.draw.rect(screen, (15, 23, 42), (rx, ry - header_h, rw, header_h))
         pg.draw.rect(screen, (30, 41, 59), (rx, ry - header_h, rw, header_h), 1)
         t_header = self.font_label.render("TACTICAL RADAR SCOPE", True, (148, 163, 184))
-        screen.blit(t_header, (rx + 8, ry - header_h + 3))
+        screen.blit(t_header, (rx + 10, ry - header_h + 4))
 
         # Radar Scope Body
         scope_bg = (8, 12, 18)
@@ -500,7 +499,7 @@ class GUIManager:
         pg.draw.rect(screen, (30, 41, 59), card_rect, 1)
 
         # Top Title Header
-        header_h = 24
+        header_h = 28
         pg.draw.rect(screen, (15, 23, 42), (rx, ry, rw, header_h))
         pg.draw.line(screen, (30, 41, 59), (rx, ry + header_h), (rx + rw, ry + header_h), 1)
 
@@ -510,17 +509,17 @@ class GUIManager:
                   f"THREAT-{self.selected_index:02d}" if self.selected_type == "Kamikaze Threat" else "DEFENSE ASSET"
 
         t_title = self.font_header.render(f"TELEMETRY // {iff_tag}", True, accent_color)
-        screen.blit(t_title, (rx + 8, ry + 4))
+        screen.blit(t_title, (rx + 10, ry + 6))
 
         # Close button [×]
         close_bg = (50, 20, 20) if self.is_hovering_close else (20, 28, 42)
         pg.draw.rect(screen, close_bg, self.inspector_close_rect)
         pg.draw.rect(screen, (51, 65, 85), self.inspector_close_rect, 1)
-        t_x = self.font_mono_small.render("x", True, (241, 245, 249))
-        screen.blit(t_x, (self.inspector_close_rect.x + 4, self.inspector_close_rect.y))
+        t_x = self.font_mono.render("x", True, (241, 245, 249))
+        screen.blit(t_x, (self.inspector_close_rect.x + 5, self.inspector_close_rect.y + 1))
 
         # Kinematics & Brain Data
-        y = ry + header_h + 8
+        y = ry + header_h + 10
 
         # AI Behavior State
         state_name = "CRUISE_ESCORT"
@@ -560,42 +559,43 @@ class GUIManager:
             else:
                 rows.append(("TARGET LOCK:", "STANDBY / FORMATION", (100, 116, 139)))
 
+        val_x = rx + 125
         for lbl, val, val_col in rows:
             t_lbl = self.font_label.render(lbl, True, (100, 116, 139))
             t_val = self.font_mono.render(val, True, val_col)
-            screen.blit(t_lbl, (rx + 8, y))
-            screen.blit(t_val, (rx + 115, y))
-            y += 18
+            screen.blit(t_lbl, (rx + 10, y))
+            screen.blit(t_val, (val_x, y))
+            y += 21
 
         # Weapons Inventory for Wingman
         if self.selected_type == "Loyal Wingman":
-            y += 4
-            pg.draw.line(screen, (30, 41, 59), (rx + 8, y), (rx + rw - 8, y), 1)
-            y += 8
+            y += 6
+            pg.draw.line(screen, (30, 41, 59), (rx + 10, y), (rx + rw - 10, y), 1)
+            y += 10
 
             t_wep_head = self.font_label.render("PAYLOAD INVENTORY & AMMO", True, (148, 163, 184))
-            screen.blit(t_wep_head, (rx + 8, y))
-            y += 18
+            screen.blit(t_wep_head, (rx + 10, y))
+            y += 20
 
             # Vaporizer
             vap_ammo = agent.vaporizer_gun.get_ammo_available() if hasattr(agent, 'vaporizer_gun') else 0
             v_avail = getattr(agent.vaporizer_gun, 'available', True) if hasattr(agent, 'vaporizer_gun') else False
-            self._draw_compact_weapon_row(screen, rx + 8, y, "VAPORIZER [100px]", vap_ammo, 10, (56, 189, 248), v_avail)
-            y += 26
+            self._draw_compact_weapon_row(screen, rx + 10, y, rw - 20, "VAPORIZER [100px]", vap_ammo, 10, (56, 189, 248), v_avail)
+            y += 28
 
             # Freezing
             frz_ammo = agent.freezing_gun.get_ammo_available() if hasattr(agent, 'freezing_gun') else 0
             f_avail = getattr(agent.freezing_gun, 'available', True) if hasattr(agent, 'freezing_gun') else False
-            self._draw_compact_weapon_row(screen, rx + 8, y, "FREEZING  [300px]", frz_ammo, 10, (74, 222, 128), f_avail)
+            self._draw_compact_weapon_row(screen, rx + 10, y, rw - 20, "FREEZING  [300px]", frz_ammo, 10, (74, 222, 128), f_avail)
 
         elif self.selected_type == "Protected Area":
-            y += 4
-            pg.draw.line(screen, (30, 41, 59), (rx + 8, y), (rx + rw - 8, y), 1)
-            y += 8
+            y += 6
+            pg.draw.line(screen, (30, 41, 59), (rx + 10, y), (rx + rw - 10, y), 1)
+            y += 10
             t_life = self.font_mono.render(f"INTEGRITY: {agent.life:.1f}%", True, (74, 222, 128) if agent.life > 30 else (248, 113, 113))
-            screen.blit(t_life, (rx + 8, y))
+            screen.blit(t_life, (rx + 10, y))
 
-    def _draw_compact_weapon_row(self, screen, x, y, name, ammo, max_ammo, pip_color, is_ready):
+    def _draw_compact_weapon_row(self, screen, x, y, max_w, name, ammo, max_ammo, pip_color, is_ready):
         """Draws a clean tabular weapon row with discrete tactical ammo pips."""
         t_name = self.font_mono_small.render(name, True, (203, 213, 225))
         screen.blit(t_name, (x, y))
@@ -603,12 +603,12 @@ class GUIManager:
         stat_str = "RDY" if is_ready else "RLD"
         stat_col = (74, 222, 128) if is_ready else (251, 191, 36)
         t_stat = self.font_mono_small.render(stat_str, True, stat_col)
-        screen.blit(t_stat, (x + 245, y))
+        screen.blit(t_stat, (x + max_w - t_stat.get_width(), y))
 
         # Ammo pips
-        pip_w, pip_h = 8, 5
-        pip_gap = 2
-        pip_y = y + 13
+        pip_w, pip_h = 10, 6
+        pip_gap = 3
+        pip_y = y + 14
 
         for i in range(max_ammo):
             px = x + i * (pip_w + pip_gap)
@@ -619,4 +619,4 @@ class GUIManager:
                 pg.draw.rect(screen, (51, 65, 85), (px, pip_y, pip_w, pip_h), 1)
 
         t_cnt = self.font_mono_small.render(f"{ammo:02d}/{max_ammo:02d}", True, (148, 163, 184))
-        screen.blit(t_cnt, (x + max_ammo * (pip_w + pip_gap) + 12, pip_y - 2))
+        screen.blit(t_cnt, (x + max_ammo * (pip_w + pip_gap) + 14, pip_y - 2))
