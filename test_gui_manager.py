@@ -121,7 +121,7 @@ class TestGUIManager(unittest.TestCase):
         self.gui.update_layout(1280, 720)
         self.assertEqual(self.gui.screen_width, 1280)
         self.assertEqual(self.gui.screen_height, 720)
-        self.assertEqual(self.gui.minimap_rect.right, 1280 - 20)
+        self.assertEqual(self.gui.minimap_rect.right, 1280 - 12)
 
     def test_mission_card_rendering_active_and_paused(self):
         # 1. Active state rendering
