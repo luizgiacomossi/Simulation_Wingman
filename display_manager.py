@@ -58,11 +58,16 @@ class DisplayManager(object):
         # Text rendering surface cache
         self._text_cache = {}
 
-        # Background texture
+        # Background texture (repeated / tiled across the extended world at native 1:1 resolution)
         self.background_image = None
         try:
-            bg = pygame.image.load("models/texture/camouflage.png").convert()
-            self.background_image = pygame.transform.scale(bg, (self.world_width, self.world_height))
+            tile = pygame.image.load("models/texture/camouflage.png").convert()
+            tile_w, tile_h = tile.get_size()
+            tiled_bg = pygame.Surface((self.world_width, self.world_height), depth=24)
+            for tx in range(0, self.world_width, tile_w):
+                for ty in range(0, self.world_height, tile_h):
+                    tiled_bg.blit(tile, (tx, ty))
+            self.background_image = tiled_bg
         except Exception as e:
             print(f"Notice: Camouflage texture not loaded ({e}), using default background.")
 
