@@ -86,9 +86,13 @@ def main():
     #list_obst = obst.get_coordenates()
 
     simulation = Simulation(screenSimulation)
-    if "--llm" in sys.argv or "--ai" in sys.argv:
+    if "--llm" in sys.argv or "--ai" in sys.argv or "--laya" in sys.argv:
         if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
             simulation.llm_commander.enabled = True
+            if "--laya" in sys.argv:
+                simulation.llm_commander.switch_engine("laya")
+            elif "--llm" in sys.argv:
+                simulation.llm_commander.switch_engine("qwen")
     # para testar o pso, depois retirar esse comentario !!!!!!
     if running_PSO:
         simulation.create_swarm_uav(NUM_DRONES,
@@ -200,9 +204,11 @@ def main():
             # generates new iteration
             accelerated_factor = simulation.accelerated_factor
             previous_llm_state = getattr(getattr(simulation, 'llm_commander', None), 'enabled', False)
+            previous_llm_engine = getattr(getattr(simulation, 'llm_commander', None), 'engine', 'laya')
             simulation = Simulation(screenSimulation)
             if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
                 simulation.llm_commander.enabled = previous_llm_state
+                simulation.llm_commander.engine = previous_llm_engine
             if running_PSO:
                 simulation.create_swarm_uav(NUM_DRONES,
                                             NUM_KAMIKAZES,

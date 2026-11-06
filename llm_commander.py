@@ -52,19 +52,25 @@ Do not output conversational filler. Provide only the JSON object."""
 
 class LLMTacticalCommander:
     """
-    Asynchronous Tactical Commander connecting the simulation to local SLM/LLM inference.
+    Asynchronous Tactical Commander connecting the simulation to local AI inference.
+    Supports dual execution engines:
+    1. 'laya': Non-autoregressive System 1 decision model (Convai Laya) on Apple Silicon MPS (~24ms).
+    2. 'qwen': Autoregressive System 2 generative SLM (Qwen 3.5 9B) via LM Studio (~5s).
     Executes in a separate daemon thread to guarantee zero frame drops in 60 FPS Pygame physics.
     """
-    persistent_enabled: bool = ("--llm" in sys.argv or "--ai" in sys.argv)
+    persistent_enabled: bool = ("--llm" in sys.argv or "--ai" in sys.argv or "--laya" in sys.argv)
+    persistent_engine: str = "qwen" if "--llm" in sys.argv else "laya"
 
     def __init__(self,
+                 engine: Optional[str] = None,
                  api_url: str = "http://127.0.0.1:1234/v1/chat/completions",
                  model_name: str = "qwen/qwen3.5-9b",
-                 decision_interval: float = 5.0,
+                 decision_interval: Optional[float] = None,
                  timeout: float = 25.0):
+        self.engine = engine if engine else LLMTacticalCommander.persistent_engine
         self.api_url = api_url
         self.model_name = model_name
-        self.decision_interval = decision_interval
+        self.decision_interval = decision_interval if decision_interval is not None else (1.0 if self.engine == "laya" else 5.0)
         self.timeout = timeout
 
         self.enabled = LLMTacticalCommander.persistent_enabled
@@ -77,13 +83,26 @@ class LLMTacticalCommander:
 
         self._lock = threading.Lock()
         self._pending_decision: Optional[Dict[str, Any]] = None
+        self._laya_agent = None
 
     def toggle(self) -> bool:
-        """Toggles LLM Commander active state and preserves across episode resets."""
+        """Toggles AI Commander active state and preserves across episode resets."""
         self.enabled = not self.enabled
         LLMTacticalCommander.persistent_enabled = self.enabled
-        print(f"[LLM Commander] State changed: {'ENABLED' if self.enabled else 'DISABLED'}")
+        print(f"[AI Commander] State changed: {'ENABLED' if self.enabled else 'DISABLED'} [Engine: {self.engine.upper()}]")
         return self.enabled
+
+    def switch_engine(self, engine: Optional[str] = None) -> str:
+        """Switches between 'laya' (24ms reflex) and 'qwen' (5s generative)."""
+        if engine in ("laya", "qwen"):
+            self.engine = engine
+        else:
+            self.engine = "qwen" if self.engine == "laya" else "laya"
+
+        LLMTacticalCommander.persistent_engine = self.engine
+        self.decision_interval = 1.0 if self.engine == "laya" else 5.0
+        print(f"[AI Commander] Switched engine to: {self.engine.upper()} (Interval: {self.decision_interval}s)")
+        return self.engine
 
     def build_telemetry_snapshot(self, simulation: Any) -> Dict[str, Any]:
         """Constructs an anonymized, standardized tactical state JSON for the LLM."""
@@ -161,13 +180,118 @@ class LLMTacticalCommander:
                 self.is_request_in_flight = True
                 self.last_decision_time = current_time
                 snapshot = self.build_telemetry_snapshot(simulation)
+                target_func = self._async_query_laya if self.engine == "laya" else self._async_query_llm
                 worker = threading.Thread(
-                    target=self._async_query_llm,
+                    target=target_func,
                     args=(snapshot,),
                     daemon=True,
-                    name="LLM-Commander-Worker"
+                    name=f"AI-Commander-{self.engine.title()}-Worker"
                 )
                 worker.start()
+
+    def _get_laya_agent(self):
+        """Lazy-loads Convai Laya model onto Apple Silicon MPS or CPU."""
+        if self._laya_agent is None:
+            import laya
+            import torch
+            device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+            print(f"[Laya Commander] Initializing Convai Laya decision engine on {device.upper()}...")
+            self._laya_agent = laya.load('convaiinnovations/laya', device=device)
+            print("[Laya Commander] Laya System-1 decision agent ready for sub-50ms inference.")
+        return self._laya_agent
+
+    def _async_query_laya(self, snapshot: Dict[str, Any]) -> None:
+        """Worker thread executing sub-50ms non-autoregressive decision inference via Laya."""
+        try:
+            import laya
+            agent = self._get_laya_agent()
+            t0 = time.time()
+            state_text = (
+                f"Tactical Air Defense Status: Base integrity {snapshot['protected_area']['life']}%, "
+                f"status {snapshot['protected_area']['status']}. "
+                f"Wingmen operational: {snapshot['num_wingmen_alive']}. "
+                f"Threat radar tracks {len(snapshot['threats_detected'])} inbound hostiles."
+            )
+            for t in snapshot['threats_detected'][:4]:
+                state_text += f" Target {t['id']}: bearing {t.get('bearing_deg', 0)} deg, speed {t.get('speed', 0)} px/f."
+
+            questions = {
+                "selected_formation": {
+                    "type": "choice",
+                    "instructions": "Which swarm tactical formation best defends against incoming threats?",
+                    "criteria": {
+                        "WALL": "Linear defensive screen perpendicular to hostile ingress corridor.",
+                        "CIRCLE": "Radial perimeter defense ring around protected base.",
+                        "ECHELON": "Staggered diagonal formation to sweep flank attacks.",
+                        "WEDGE": "Spearhead formation for aggressive frontal interception."
+                    }
+                },
+                "leader_action": {
+                    "type": "choice",
+                    "instructions": "What maneuver should the Flight Lead execute?",
+                    "criteria": {
+                        "HOLD_DEFENSIVE": "Maintain stand-off orbit while wingmen engage.",
+                        "ENGAGE_FORWARD": "Advance forward escorted by wingmen.",
+                        "EVADE_RETREAT": "Reposition away from incoming collision vectors.",
+                        "ORBIT_BASE": "Circle around the protected base."
+                    }
+                },
+                "scramble_interceptors": {
+                    "type": "noul",
+                    "instructions": "Should wingmen be dispatched as interceptors rather than close escort?"
+                },
+                "threat_severity": {
+                    "type": "score",
+                    "instructions": "How critical is the immediate danger to mission assets?",
+                    "criteria": [
+                        "minimal: distant hostiles",
+                        "low: outside defense zone",
+                        "medium: converging towards assets",
+                        "critical: penetrating inner defense zone"
+                    ]
+                }
+            }
+
+            res = laya.decide(agent, state_text, questions=questions)
+            latency = round(time.time() - t0, 3)
+
+            form = res.get("selected_formation", {}).get("choice", "WALL")
+            action = res.get("leader_action", {}).get("choice", "HOLD_DEFENSIVE")
+            scramble = res.get("scramble_interceptors", {}).get("action", {}).get("act_probability", 0) > 0.5
+            severity = res.get("threat_severity", {}).get("score", 1.0)
+            conf = res.get("selected_formation", {}).get("answer_confidence", 0.0)
+
+            total_wingmen = snapshot["num_wingmen_alive"]
+            num_int = min(len(snapshot["threats_detected"]), total_wingmen) if scramble else 0
+            num_esc = total_wingmen - num_int
+            priorities = [t["id"] for t in snapshot["threats_detected"]]
+
+            decision = {
+                "selected_formation": form,
+                "leader_action": action,
+                "num_interceptors": num_int,
+                "num_close_escorts": num_esc,
+                "target_priority_order": priorities,
+                "tactical_rationale": f"Laya System-1 reflex [MPS {int(latency*1000)}ms]: {form} selected (conf {conf:.2f}). Threat level {severity:.1f}.",
+                "_latency": latency,
+                "_timestamp": time.time()
+            }
+
+            with self._lock:
+                self._pending_decision = decision
+                self.last_decision = decision
+                self.last_latency = latency
+                self.last_error = None
+                self.total_decisions += 1
+            print(f"[Laya Commander] Decision in {int(latency*1000)}ms: {form} | Action: {action} | Role: {num_int} INT / {num_esc} ESC")
+
+        except Exception as e:
+            with self._lock:
+                self.last_error = str(e)
+            print(f"[Laya Commander Error] Inference failed: {e}")
+        finally:
+            with self._lock:
+                self.is_request_in_flight = False
 
     def _async_query_llm(self, snapshot: Dict[str, Any]) -> None:
         """Worker thread executing the HTTP inference request to the local SLM."""
@@ -300,8 +424,11 @@ class LLMTacticalCommander:
 
     def get_hud_status(self) -> Dict[str, Any]:
         """Provides status summary for rendering onto the Glassmorphism HUD."""
+        engine_label = "LAYA [MPS]" if self.engine == "laya" else "QWEN 3.5 [LM]"
         return {
             "enabled": self.enabled,
+            "engine": self.engine,
+            "engine_label": engine_label,
             "in_flight": self.is_request_in_flight,
             "is_thinking": self.is_request_in_flight,
             "last_formation": self.last_decision.get("selected_formation", "N/A") if self.last_decision else "N/A",

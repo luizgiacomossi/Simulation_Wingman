@@ -65,6 +65,11 @@ class ProcessorUserInput:
                 if hasattr(self.simulation, 'llm_commander') and self.simulation.llm_commander is not None:
                     self.simulation.llm_commander.toggle()
 
+            # Key 'm' pressed -> Switch AI Commander Engine (Laya vs Qwen)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_m:
+                if hasattr(self.simulation, 'llm_commander') and self.simulation.llm_commander is not None:
+                    self.simulation.llm_commander.switch_engine()
+
             # Key '0' or 'HOME' -> Reset zoom/pan
             if event.type == pygame.KEYDOWN and (event.key == pygame.K_0 or event.key == pygame.K_HOME):
                 self.simulation.screenSimulation.reset_view()

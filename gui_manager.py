@@ -382,7 +382,8 @@ class GUIManager:
             llm_stat = simulation.llm_commander.get_hud_status()
             llm_on = llm_stat.get("enabled", False)
             llm_flight = llm_stat.get("in_flight", False)
-            llm_text = "THINKING..." if llm_flight else ("AI: ON" if llm_on else "AI: OFF")
+            engine_name = llm_stat.get("engine", "laya").upper()
+            llm_text = "EVAL..." if llm_flight else (f"{engine_name}: ON" if llm_on else f"{engine_name}: OFF")
             llm_col = (250, 204, 21) if llm_flight else ((56, 189, 248) if llm_on else (100, 116, 139))
 
             pg.draw.line(screen, (30, 41, 59), (x - 9, 6), (x - 9, self.top_bar_height - 7), 1)
@@ -409,7 +410,8 @@ class GUIManager:
         shortcuts = [
             ("SPACE", "Pause/Resume"),
             ("1-4", "Formation"),
-            ("L", "AI Leader"),
+            ("L", "Toggle AI"),
+            ("M", "Switch Engine"),
             ("L-Click", "Select/Move"),
             ("R-Click", "Spawn Threat"),
             ("C", "Center View"),
@@ -681,7 +683,8 @@ class GUIManager:
         pg.draw.line(screen, (30, 41, 59), (card_x, card_y + header_h), (card_x + card_w, card_y + header_h), 1)
 
         # Header title
-        t_header = self.font_header.render("AI TACTICAL COMMANDER // QWEN-3.5", True, (251, 191, 36) if summary["enabled"] else (148, 163, 184))
+        engine_label = summary.get("engine_label", "LAYA [MPS]" if summary.get("engine") == "laya" else "QWEN 3.5 [LM]")
+        t_header = self.font_header.render(f"AI COMMANDER // {engine_label}", True, (251, 191, 36) if summary["enabled"] else (148, 163, 184))
         screen.blit(t_header, (card_x + 10, card_y + 5))
 
         # Status Pill (Right side of header)
@@ -693,7 +696,7 @@ class GUIManager:
         elif summary["is_thinking"]:
             # Pulsing amber indicator
             alpha_pulse = int(180 + 75 * math.sin(self.pulse_phase * 2.5))
-            pill_text = "THINKING..."
+            pill_text = "EVALUATING..."
             pill_bg = (66, 32, 6)
             pill_border = (251, 191, 36)
             pill_fg = (251, 191, 36)
@@ -714,7 +717,7 @@ class GUIManager:
 
         # Card body content
         if not summary["enabled"]:
-            msg = self.font_meta.render("Commander offline. Press [L] or toggle via status bar to activate.", True, (100, 116, 139))
+            msg = self.font_meta.render(f"Offline. Press [L] to activate, [M] to toggle engine ({engine_label}).", True, (100, 116, 139))
             screen.blit(msg, (card_x + 12, card_y + header_h + 10))
             return
 
@@ -728,7 +731,13 @@ class GUIManager:
         roles_val = f"{n_inter} INT / {n_escort} ESC" if (n_inter + n_escort) > 0 else "BALANCED / AUTO"
         target_val = summary["last_target"]
         action_val = summary["last_action"]
-        lat_val = f"{summary['last_latency']:.2f}s" if summary["last_latency"] > 0 else "BENCHMARKING"
+        if summary["last_latency"] > 0:
+            if summary.get("engine") == "laya":
+                lat_val = f"{summary['last_latency']*1000:.0f}ms"
+            else:
+                lat_val = f"{summary['last_latency']:.2f}s"
+        else:
+            lat_val = "BENCHMARKING"
         cycle_val = f"#{summary['total_decisions']} ({lat_val})"
 
         rows = [

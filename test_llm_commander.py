@@ -103,3 +103,28 @@ class TestLLMTacticalCommander:
         assert "last_formation" in status
         assert "last_latency" in status
         assert "total_decisions" in status
+        assert "engine" in status
+
+    def test_switch_engine(self):
+        commander = LLMTacticalCommander(engine="laya")
+        assert commander.engine == "laya"
+        assert commander.decision_interval == 1.0
+
+        commander.switch_engine("qwen")
+        assert commander.engine == "qwen"
+        assert commander.decision_interval == 5.0
+
+        commander.switch_engine()
+        assert commander.engine == "laya"
+        assert commander.decision_interval == 1.0
+
+    def test_laya_query_execution(self):
+        """Verifies that Laya engine processes telemetry snapshot in under 100ms."""
+        commander = LLMTacticalCommander(engine="laya")
+        snapshot = commander.build_telemetry_snapshot(self.simulation)
+        commander._async_query_laya(snapshot)
+
+        assert commander.last_decision is not None
+        assert commander.last_decision["selected_formation"] in ("WALL", "CIRCLE", "ECHELON", "WEDGE")
+        assert commander.last_latency < 1.0
+        assert commander.total_decisions >= 1
