@@ -141,6 +141,22 @@ class LLMTacticalCommander:
                 "target": "PROTECTED_AREA" if (i % 2 == 0) else "LEADER"
             })
 
+        # Loyal Wingmen individual telemetry
+        wingmen_data = []
+        for i, w in enumerate(sm.swarm):
+            w_pos = [round(w.location.x, 1), round(w.location.y, 1)]
+            w_speed = round(w.velocity.magnitude(), 2) if hasattr(w, 'velocity') else 0.0
+            w_vap = w.vaporizer_gun.get_ammo_available() if hasattr(w, 'vaporizer_gun') else 0
+            w_frz = w.freezing_gun.get_ammo_available() if hasattr(w, 'freezing_gun') else 0
+            wingmen_data.append({
+                "id": f"LW_{i+1:02d}",
+                "pos": w_pos,
+                "speed": w_speed,
+                "role": getattr(w, 'tactical_role', 'INTERCEPTOR'),
+                "ammo_vaporizer": w_vap,
+                "ammo_cryo": w_frz
+            })
+
         return {
             "leader": {
                 "pos": leader_pos,
@@ -154,6 +170,7 @@ class LLMTacticalCommander:
                 "status": "SECURE" if base_active and base_life > 50 else "UNDER_THREAT"
             },
             "num_wingmen_alive": len(sm.swarm),
+            "loyal_wingmen": wingmen_data,
             "threats_detected": threats,
             "simulation_time_sec": round(sm.simulation_time, 2)
         }
