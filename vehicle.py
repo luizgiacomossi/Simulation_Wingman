@@ -1064,7 +1064,7 @@ class LeadingDrone(Vehicle):
         self.destroyed = True
 
 class LoyalWingman(Vehicle):
-    def __init__(self, x, y, behavior, window, protected_area, distance_chase = 400, kp= 0.625, kv= 4.5, enable_rtb: bool = False):
+    def __init__(self, x, y, behavior, window, protected_area, distance_chase = 400, kp= 0.625, kv= 4.5, enable_rtb: bool = ENABLE_WINGMAN_RTB):
         super().__init__(x, y, behavior, window)
         self.destroyed = False
         self.error = vec2(0,0)

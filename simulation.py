@@ -170,7 +170,7 @@ class Simulation(object):
                         kv= 4.5, 
                         distance_formation = DISTANCE_LEADER, 
                         distance_rings_formation = 1.2,
-                        enable_rtb = False):
+                        enable_rtb = ENABLE_WINGMAN_RTB):
         self.swarm_manager.create_swarm(
             num_loyal=num_swarm,
             num_kamikazes=num_kamikazes,

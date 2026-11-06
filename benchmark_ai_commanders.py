@@ -26,7 +26,7 @@ from dataclasses import dataclass, asdict
 import pygame as pg
 from constants import (
     NUM_DRONES, NUM_KAMIKAZES, SAMPLE_TIME,
-    WORLD_WIDTH, WORLD_HEIGHT
+    WORLD_WIDTH, WORLD_HEIGHT, ENABLE_WINGMAN_RTB
 )
 from swarm_manager import SwarmManager
 from llm_commander import LLMTacticalCommander
@@ -66,7 +66,7 @@ def run_single_episode(engine: str = "baseline",
                        decision_interval_sec: float = 1.0,
                        num_wingmen: int = NUM_DRONES,
                        num_kamikazes: int = NUM_KAMIKAZES,
-                       enable_rtb: bool = False,
+                       enable_rtb: bool = ENABLE_WINGMAN_RTB,
                        seed: int = None) -> Dict[str, Any]:
     """
     Executes a single headless combat episode with the selected tactical commander.
@@ -235,7 +235,7 @@ def run_benchmark_suite(engines: List[str] = ["baseline", "laya"],
                         survival_to_death: bool = False,
                         num_wingmen: int = 4,
                         num_kamikazes: int = 4,
-                        enable_rtb: bool = False,
+                        enable_rtb: bool = ENABLE_WINGMAN_RTB,
                         csv_output: str = "benchmark_results.csv") -> List[Dict[str, Any]]:
     """
     Executes multiple comparative evaluation episodes across candidate engines.
@@ -387,13 +387,14 @@ if __name__ == "__main__":
     parser.add_argument("--wingmen", type=int, default=4, help="Number of Loyal Wingmen UAVs")
     parser.add_argument("--kamikazes", type=int, default=4, help="Number of Kamikaze hostiles")
     parser.add_argument("--speed-factor", type=float, default=2.0, help="Wall-clock acceleration factor (for realtime mode)")
-    parser.add_argument("--enable-rtb", action="store_true",
-                        help="Enable Return-to-Base (RTB) logistics: wingmen return to base to reload when out of ammo")
+    parser.add_argument("--disable-rtb", action="store_true",
+                        help="Disable Return-to-Base (RTB) logistics (enabled by default)")
     parser.add_argument("--csv", type=str, default="benchmark_results.csv", help="CSV export destination")
 
     args = parser.parse_args()
 
     max_steps = 36000 if args.survival_to_death else int(args.duration_sec / SAMPLE_TIME)
+    enable_rtb = not args.disable_rtb
 
     results = run_benchmark_suite(
         engines=args.engines,
@@ -405,7 +406,7 @@ if __name__ == "__main__":
         survival_to_death=args.survival_to_death,
         num_wingmen=args.wingmen,
         num_kamikazes=args.kamikazes,
-        enable_rtb=args.enable_rtb,
+        enable_rtb=enable_rtb,
         csv_output=args.csv
     )
 

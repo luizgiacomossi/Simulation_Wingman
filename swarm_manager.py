@@ -5,7 +5,8 @@ import pygame
 from constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT,
     NUM_DRONES, NUM_KAMIKAZES, DISTANCE_LEADER, RESOLUTION,
-    SIZE_DRONE, LIGHT_BLUE, TIME_EXPLOSION, SAMPLE_TIME
+    SIZE_DRONE, LIGHT_BLUE, TIME_EXPLOSION, SAMPLE_TIME,
+    ENABLE_WINGMAN_RTB
 )
 from quadtree import Quadtree, Rect
 from vehicle import Vehicle, LoyalWingman, Kamikaze, LeadingDrone
@@ -52,7 +53,7 @@ class SwarmManager(object):
                      distance_chase=306.6, kp=0.625, kv=4.5,
                      distance_formation=DISTANCE_LEADER, distance_rings_formation=1.2,
                      protected_area_pos=None, protected_area_radius=None,
-                     enable_rtb=False):
+                     enable_rtb=ENABLE_WINGMAN_RTB):
         """
         Initializes the entire multi-UAV battlefield with leader, wingmen, kamikazes, and protected area.
         """
