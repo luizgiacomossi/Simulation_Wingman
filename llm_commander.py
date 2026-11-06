@@ -63,11 +63,13 @@ class LLMTacticalCommander:
 
     def __init__(self,
                  engine: Optional[str] = None,
+                 ablation_mode: str = "full",
                  api_url: str = "http://127.0.0.1:1234/v1/chat/completions",
                  model_name: str = "qwen/qwen3.5-9b",
                  decision_interval: Optional[float] = None,
                  timeout: float = 25.0):
         self.engine = engine if engine else LLMTacticalCommander.persistent_engine
+        self.ablation_mode = ablation_mode  # 'full', 'movement_only', 'formation_only', 'roles_only'
         self.api_url = api_url
         self.model_name = model_name
         self.decision_interval = decision_interval if decision_interval is not None else (1.0 if self.engine == "laya" else 5.0)
@@ -115,9 +117,12 @@ class LLMTacticalCommander:
         if leader and hasattr(leader, 'velocity') and leader.velocity.magnitude() > 0.01:
             leader_heading = round(math.degrees(math.atan2(leader.velocity.y, leader.velocity.x)), 1)
 
-        base_pos = [round(base.pos.x, 1), round(base.pos.y, 1)] if base and hasattr(base, 'pos') else [0, 0]
+        base_vec = getattr(base, 'pos', getattr(base, 'coordenates', None))
+        base_pos = [round(base_vec.x, 1), round(base_vec.y, 1)] if base_vec else [0, 0]
         base_life = getattr(base, 'life', 100)
         base_active = base.is_active() if base and hasattr(base, 'is_active') else True
+
+        dist_leader_to_base = round((leader.location - base_vec).magnitude(), 1) if (leader and base_vec) else 0.0
 
         threats = []
         for i, k in enumerate(sm.kamikazes):
@@ -127,19 +132,38 @@ class LLMTacticalCommander:
             k_pos = [round(k.location.x, 1), round(k.location.y, 1)]
             k_speed = round(k.velocity.magnitude(), 2) if hasattr(k, 'velocity') else 2.0
             
-            # Approximate bearing from leader
+            # Approximate bearing and distance from leader
             bearing = 0.0
+            dist_to_leader = 999.0
             if leader:
                 rel = k.location - leader.location
+                dist_to_leader = round(rel.magnitude(), 1)
                 bearing = round((math.degrees(math.atan2(rel.y, rel.x)) + 360) % 360, 1)
+
+            dist_to_base = round((k.location - base_vec).magnitude(), 1) if base_vec else 999.0
+
+            # Real assigned target
+            st = getattr(getattr(k, 'behavior', None), 'state', None)
+            ttype = getattr(st, 'target_type', 'base' if dist_to_base < dist_to_leader else 'leader')
+            if str(ttype).lower() in ['base', 'protected_area']:
+                assigned_target = "PROTECTED_BASE"
+            elif str(ttype).lower() in ['leader']:
+                assigned_target = "FLIGHT_LEAD"
+            else:
+                assigned_target = "WINGMAN"
 
             threats.append({
                 "id": str(k_id),
                 "pos": k_pos,
                 "speed": k_speed,
                 "bearing_deg": bearing,
-                "target": "PROTECTED_AREA" if (i % 2 == 0) else "LEADER"
+                "dist_to_leader": dist_to_leader,
+                "dist_to_base": dist_to_base,
+                "target": assigned_target
             })
+
+        # Sort threats by closest distance to Flight Lead
+        threats.sort(key=lambda t: t.get("dist_to_leader", 999.0))
 
         # Loyal Wingmen individual telemetry
         wingmen_data = []
@@ -170,6 +194,8 @@ class LLMTacticalCommander:
                 "status": "SECURE" if base_active and base_life > 50 else "UNDER_THREAT"
             },
             "num_wingmen_alive": len(sm.swarm),
+            "dist_leader_to_base": dist_leader_to_base,
+            "threats_targeting_base": sum(1 for t in threats if t.get("target") == "PROTECTED_BASE" or t.get("dist_to_base", 999.0) < 500.0),
             "loyal_wingmen": wingmen_data,
             "threats_detected": threats,
             "simulation_time_sec": round(sm.simulation_time, 2)
@@ -206,15 +232,18 @@ class LLMTacticalCommander:
                 )
                 worker.start()
 
+    _cached_laya_agent = None
+
     def _get_laya_agent(self):
-        """Lazy-loads Convai Laya model onto Apple Silicon MPS or CPU."""
-        if self._laya_agent is None:
+        """Lazy-loads Convai Laya model onto Apple Silicon MPS or CPU once and caches across instances."""
+        if LLMTacticalCommander._cached_laya_agent is None:
             import laya
             import torch
             device = 'mps' if torch.backends.mps.is_available() else 'cpu'
             print(f"[Laya Commander] Initializing Convai Laya decision engine on {device.upper()}...")
-            self._laya_agent = laya.load('convaiinnovations/laya', device=device)
+            LLMTacticalCommander._cached_laya_agent = laya.load('convaiinnovations/laya', device=device)
             print("[Laya Commander] Laya System-1 decision agent ready for sub-50ms inference.")
+        self._laya_agent = LLMTacticalCommander._cached_laya_agent
         return self._laya_agent
 
     def _async_query_laya(self, snapshot: Dict[str, Any]) -> None:
@@ -223,14 +252,21 @@ class LLMTacticalCommander:
             import laya
             agent = self._get_laya_agent()
             t0 = time.time()
+            dist_lead_base = snapshot.get('dist_leader_to_base', 750.0)
+            base_threats = snapshot.get('threats_targeting_base', 0)
+            closest_dist = snapshot['threats_detected'][0].get('dist_to_leader', 999.0) if snapshot['threats_detected'] else 999.0
+            
             state_text = (
-                f"Tactical Air Defense Status: Base integrity {snapshot['protected_area']['life']}%, "
-                f"status {snapshot['protected_area']['status']}. "
-                f"Wingmen operational: {snapshot['num_wingmen_alive']}. "
-                f"Threat radar tracks {len(snapshot['threats_detected'])} inbound hostiles."
+                f"MUM-T TACTICAL AIR DEFENSE TELEMETRY: Base integrity is {snapshot['protected_area']['life']}%, "
+                f"Base is located {dist_lead_base:.0f}px from Flight Lead. "
+                f"Active Swarm: {snapshot['num_wingmen_alive']} Loyal Wingmen operational. "
+                f"Radar Tracks: {len(snapshot['threats_detected'])} inbound kamikazes detected "
+                f"({base_threats} hostiles attacking Protected Base, closest hostile to Flight Lead is {closest_dist:.0f}px). "
             )
+            if base_threats > 0 and dist_lead_base > 350.0:
+                state_text += f"URGENT: Protected Base is under attack and currently UNGUARDED ({dist_lead_base:.0f}px away)! Flight Lead must maneuver swarm to seal the base ingress corridor. "
             for t in snapshot['threats_detected'][:4]:
-                state_text += f" Target {t['id']}: bearing {t.get('bearing_deg', 0)} deg, speed {t.get('speed', 0)} px/f."
+                state_text += f" Target {t['id']}: target={t.get('target', 'LEADER')}, dist_leader={t.get('dist_to_leader', 999):.0f}px, dist_base={t.get('dist_to_base', 999):.0f}px."
 
             questions = {
                 "selected_formation": {
@@ -245,12 +281,12 @@ class LLMTacticalCommander:
                 },
                 "leader_action": {
                     "type": "choice",
-                    "instructions": "What maneuver should the Flight Lead execute?",
+                    "instructions": "What tactical maneuver should the Flight Lead execute to protect mission assets?",
                     "criteria": {
-                        "HOLD_DEFENSIVE": "Maintain stand-off orbit while wingmen engage.",
-                        "ENGAGE_FORWARD": "Advance forward escorted by wingmen.",
-                        "EVADE_RETREAT": "Reposition away from incoming collision vectors.",
-                        "ORBIT_BASE": "Circle around the protected base."
+                        "SHIELD_BASE_CORRIDOR": "Protected Base is under attack or unguarded; fly Flight Lead and Swarm to the ingress corridor between hostiles and Base to establish an interception barrier.",
+                        "EVADE_RETREAT": "Hostiles closing dangerously inside 300px of Flight Lead; execute rapid 90-degree lateral evasive dodge.",
+                        "HOLD_DEFENSIVE": "Base and Flight Lead are securely screened; maintain central station while wingmen engage.",
+                        "ENGAGE_FORWARD": "Advance forward escorted by wingmen."
                     }
                 },
                 "scramble_interceptors": {
@@ -376,14 +412,22 @@ class LLMTacticalCommander:
         self.last_decision = decision
 
         # 1. Reconfigure Formation Geometry via Strategy Pattern
-        formation_name = str(decision.get("selected_formation", "CIRCLE")).upper()
-        if formation_name in ("CIRCLE", "WEDGE", "WALL", "ECHELON"):
-            sm.set_formation_strategy(formation_name)
+        if self.ablation_mode in ("full", "formation_only"):
+            formation_name = str(decision.get("selected_formation", "CIRCLE")).upper()
+            if formation_name in ("CIRCLE", "WEDGE", "WALL", "ECHELON"):
+                sm.set_formation_strategy(formation_name)
+        else:
+            # Locked to default CIRCLE
+            formation_name = "CIRCLE"
+            sm.set_formation_strategy("CIRCLE")
 
         # 2. Divide Tactical Roles between Interceptors and Close Escorts
-        num_interceptors = decision.get("num_interceptors", len(sm.swarm) // 2)
+        if self.ablation_mode in ("full", "roles_only"):
+            num_interceptors = decision.get("num_interceptors", len(sm.swarm) // 2)
+        else:
+            num_interceptors = len(sm.swarm) // 2
+
         if sm.swarm and len(sm.swarm) > 0:
-            # Sort wingmen by distance to threats to allocate closest as interceptors
             if sm.kamikazes and len(sm.kamikazes) > 0:
                 threat_center = sum((k.location for k in sm.kamikazes), Vector2(0, 0)) / len(sm.kamikazes)
                 sorted_wingmen = sorted(sm.swarm, key=lambda w: w.location.distance_to(threat_center))
@@ -397,32 +441,75 @@ class LLMTacticalCommander:
                     wingman.tactical_role = "CLOSE_ESCORT"
 
         # 3. Inform Target Allocator about LLM Threat Priority
-        priorities = decision.get("target_priority_order", [])
+        priorities = decision.get("target_priority_order", []) if self.ablation_mode in ("full", "roles_only") else []
         if priorities and hasattr(sm, 'target_allocator'):
-            # Bump priority weight for top targets
             sm.target_allocator.top_priority_ids = priorities
 
-        # 4. Execute Flight Lead Evasive or Orbital Maneuver
-        action = decision.get("leader_action", "HOLD_DEFENSIVE")
+        # 4. Execute Flight Lead Evasive or Orbital Maneuver (Perpendicular Notching)
+        action = decision.get("leader_action", "HOLD_DEFENSIVE") if self.ablation_mode in ("full", "movement_only") else "HOLD_DEFENSIVE"
         leader = sm.leadingdrone
         base = sm.protected_area
-        if leader:
-            if action == "EVADE_RETREAT":
-                # Compute evasion vector away from average threat location
-                if sm.kamikazes and len(sm.kamikazes) > 0:
-                    threat_center = sum((k.location for k in sm.kamikazes), Vector2(0, 0)) / len(sm.kamikazes)
-                    evade_dir = (leader.location - threat_center)
-                    if evade_dir.magnitude() > 0.01:
-                        target_evade = leader.location + evade_dir.normalize() * 150.0
-                        # Bound inside airspace
-                        target_evade.x = max(100, min(WORLD_WIDTH - 100, target_evade.x))
-                        target_evade.y = max(100, min(WORLD_HEIGHT - 100, target_evade.y))
-                        leader.set_target(target_evade)
+        if leader and getattr(leader, 'is_alive', True) and not getattr(leader, 'destroyed', False):
+            base_pos = base.pos if base and hasattr(base, 'pos') else Vector2(WORLD_WIDTH / 2, WORLD_HEIGHT / 2)
+            active_threats = [k for k in sm.kamikazes if not (getattr(k, 'destroyed', False) or getattr(k, 'explode', False))]
 
-            elif action == "ORBIT_BASE" and base and hasattr(base, 'pos'):
-                # Orbit around base perimeter
-                orbit_target = base.pos + Vector2(120, 0).rotate(sm.simulation_time * 20.0)
+            if action == "EVADE_RETREAT" and active_threats:
+                # Perpendicular Notching: evade closest inbound threat by lateral 90-degree vector
+                closest_k = min(active_threats, key=lambda k: (k.location - leader.location).magnitude_squared())
+                threat_rel = leader.location - closest_k.location
+                dist = threat_rel.magnitude()
+
+                if dist > 1.0:
+                    threat_dir = threat_rel / dist
+                    # 90-degree lateral unit vectors (tangential dodge)
+                    perp1 = Vector2(-threat_dir.y, threat_dir.x)
+                    perp2 = Vector2(threat_dir.y, -threat_dir.x)
+
+                    # Dynamic dodge step size (170px)
+                    dodge_step = 170.0
+                    cand1 = leader.location + perp1 * dodge_step
+                    cand2 = leader.location + perp2 * dodge_step
+
+                    def score_dodge(cand: Vector2) -> float:
+                        # Heavy penalty if candidate penetrates border margin (120px)
+                        if cand.x < 120 or cand.x > WORLD_WIDTH - 120 or cand.y < 120 or cand.y > WORLD_HEIGHT - 120:
+                            return -10000.0
+                        # Candidate standoff distance from base: optimal is 200-260px (protecting base without drifting away)
+                        b_dist = (cand - base_pos).magnitude()
+                        return -abs(b_dist - 220.0)
+
+                    chosen_target = cand1 if score_dodge(cand1) >= score_dodge(cand2) else cand2
+                    chosen_target.x = max(100, min(WORLD_WIDTH - 100, chosen_target.x))
+                    chosen_target.y = max(100, min(WORLD_HEIGHT - 100, chosen_target.y))
+                    leader.set_target(chosen_target)
+
+            elif action == "SHIELD_BASE_CORRIDOR" and base:
+                # Dynamic Interception: position Flight Lead and swarm along the ingress threat axis of the Base
+                base_threats = [k for k in active_threats if (k.location - base_pos).magnitude() < 900.0]
+                target_threats = base_threats if base_threats else active_threats
+
+                if target_threats:
+                    threat_center = sum((k.location for k in target_threats), Vector2(0, 0)) / len(target_threats)
+                    threat_axis = threat_center - base_pos
+                    if threat_axis.magnitude() > 10.0:
+                        ingress_dir = threat_axis.normalize()
+                        # Position Flight Lead at protective standoff perimeter along threat axis
+                        standoff_dist = getattr(base, 'radius', 234) + 60.0
+                        shield_pos = base_pos + ingress_dir * standoff_dist
+                        shield_pos.x = max(100, min(WORLD_WIDTH - 100, shield_pos.x))
+                        shield_pos.y = max(100, min(WORLD_HEIGHT - 100, shield_pos.y))
+                        leader.set_target(shield_pos)
+
+            elif action == "ORBIT_BASE" and base:
+                # Circular CAP orbit around protected base perimeter
+                orbit_target = base_pos + Vector2(160, 0).rotate(sm.simulation_time * 25.0)
                 leader.set_target(orbit_target)
+
+            elif action == "HOLD_DEFENSIVE" and base:
+                # Re-center leader into primary defensive standoff station if drifted too far
+                station = base_pos + Vector2(0, -160)
+                if (leader.location - station).magnitude() > 140.0:
+                    leader.set_target(station)
 
         # 5. Broadcast Tactical Notification on Datalink Bus
         if hasattr(sm, 'message_manager') and sm.message_manager is not None:

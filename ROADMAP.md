@@ -137,7 +137,7 @@ flowchart TD
   - **Scope:** Restructure the Loyal Wingman Behavior Tree to counter advanced adversarial tactics:
     1. **Fire Discipline Condition:** Inhibit firing against jinking targets unless angular track error is low ($\Delta \theta \le \epsilon$).
     2. **Escort Leash / Tethering Condition:** Abort overextended chases if distance to leader exceeds $R_{\text{leash}}$, falling back to protect the high-value asset against decoys.
-    3. **Out-of-Ammo Sacrificial Ramming Branch:** When cartridges are exhausted and threat breaches inner ring, execute sacrificial kinetic interception (body-block) to save the leader.
+    3. **Out-of-Ammo Sacrificial Ramming Branch [COMPLETED]:** When cartridges are exhausted (Winchester state) and threat breaches inner ring, execute sacrificial kinetic interception (body-block) to save high-value assets (`test_sacrificial_ramming.py`).
   - **Acceptance Test:** Wingmen conserve ammo, maintain tight escort perimeter against decoys, and execute physical body-blocks when out of ammo.
 
 - [ ] **STEP 4.5: Hierarchical SLM Tactical Commander & Dashboard Co-Pilot (`tactical_commander_slm.py`)**

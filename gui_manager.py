@@ -198,7 +198,46 @@ class GUIManager:
 
     def draw_world_overlays(self, world_surface, simulation, display_manager):
         """Draws crisp technical reticles and targeting vectors in world coordinates."""
-        if not self.visible or self.selected_agent is None:
+        if not self.visible:
+            return
+
+        # 1. Tactical AI Commander Evasion Overlay (Perpendicular Notching Vector & Threat Vector)
+        commander = getattr(simulation, 'llm_commander', None)
+        if commander and commander.enabled and commander.last_decision:
+            action = commander.last_decision.get("leader_action", "")
+            leader = getattr(simulation.swarm_manager, 'leadingdrone', None)
+            if leader and action == "EVADE_RETREAT" and hasattr(leader, 'target') and leader.target:
+                lx, ly = int(leader.location.x), int(leader.location.y)
+                tx, ty = int(leader.target.x), int(leader.target.y)
+                # Cyan notching dodge vector
+                pg.draw.line(world_surface, (56, 189, 248), (lx, ly), (tx, ty), 2)
+                pg.draw.circle(world_surface, (56, 189, 248), (tx, ty), 5)
+                # Tag label
+                t_dodge = self.font_mono.render("DODGE 90° [NOTCHING]", True, (56, 189, 248))
+                world_surface.blit(t_dodge, (tx + 8, ty - 8))
+            elif leader and action == "SHIELD_BASE_CORRIDOR" and hasattr(leader, 'target') and leader.target:
+                lx, ly = int(leader.location.x), int(leader.location.y)
+                tx, ty = int(leader.target.x), int(leader.target.y)
+                # Amber shield intercept vector
+                pg.draw.line(world_surface, (251, 191, 36), (lx, ly), (tx, ty), 2)
+                pg.draw.circle(world_surface, (251, 191, 36), (tx, ty), 6, width=2)
+                t_shield = self.font_mono.render("SHIELD BASE CORRIDOR", True, (251, 191, 36))
+                world_surface.blit(t_shield, (tx + 8, ty - 8))
+
+        # 2. Sacrificial Ramming Intercept Vectors (Winchester body-block)
+        for drone in getattr(simulation.swarm_manager, 'swarm', []):
+            if getattr(drone, 'is_sacrificing', False) and getattr(drone, 'sacrificial_target', None):
+                target = drone.sacrificial_target
+                if not getattr(target, 'destroyed', False) and not getattr(target, 'explode', False):
+                    dx, dy = int(drone.location.x), int(drone.location.y)
+                    kx, ky = int(target.location.x), int(target.location.y)
+                    pg.draw.line(world_surface, (239, 68, 68), (dx, dy), (kx, ky), 2)
+                    pg.draw.circle(world_surface, (239, 68, 68), (kx, ky), 7, width=2)
+                    t_sac = self.font_mono_small.render("SACRIFICE [RAMMING]", True, (239, 68, 68))
+                    world_surface.blit(t_sac, (dx - 20, dy - 18))
+
+        # 3. Selected Agent Overlays
+        if self.selected_agent is None:
             return
 
         loc = getattr(self.selected_agent, 'location', getattr(self.selected_agent, 'coordenates', None))
@@ -566,9 +605,10 @@ class GUIManager:
         vel = getattr(agent, 'velocity', vec2(0, 0))
         speed = vel.length() if hasattr(vel, 'length') else 0.0
 
+        state_color = (239, 68, 68) if state_name == "SacrificialRamming" else (241, 245, 249)
         rows = [
             ("IFF STATUS:", self.selected_type.upper(), accent_color),
-            ("BRAIN STATE:", state_name, (241, 245, 249)),
+            ("BRAIN STATE:", state_name, state_color),
             ("POSITION:", f"X:{loc.x:05.1f}  Y:{loc.y:05.1f}", (241, 245, 249)),
             ("VELOCITY:", f"{speed:04.2f} px/f", (241, 245, 249)),
         ]

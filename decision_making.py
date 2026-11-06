@@ -1,16 +1,118 @@
 from behavior_tree import *
 from constants import *
 from math import inf
+import pygame as pg
+vec2 = pg.math.Vector2
+
+
+class SacrificialRammingNode(LeafNode):
+    """
+    Executes sacrificial kinetic interception (body-block) to protect high-value assets
+    (Leader or Protected Area) ONLY when weapon ammunition is completely exhausted (Winchester state).
+    """
+    def __init__(self, critical_radius_leader: float = 240.0, critical_radius_base: float = 260.0):
+        super().__init__("SacrificialRamming")
+        self.critical_radius_leader = critical_radius_leader
+        self.critical_radius_base = critical_radius_base
+        self.target_threat = None
+
+    def enter(self, agent):
+        self.target_threat = None
+
+    def execute(self, agent):
+        # 1. STRICT WINCHESTER CONDITION: Must have 0 ammo in both weapons
+        vap_ammo = agent.vaporizer_gun.get_ammo_available() if hasattr(agent, 'vaporizer_gun') else 0
+        frz_ammo = agent.freezing_gun.get_ammo_available() if hasattr(agent, 'freezing_gun') else 0
+        if vap_ammo > 0 or frz_ammo > 0:
+            agent.is_sacrificing = False
+            agent.sacrificial_target = None
+            return ExecutionStatus.FAILURE
+
+        # 2. Check available threats
+        kamikazes = getattr(agent, 'kamikazes', [])
+        if not kamikazes:
+            agent.is_sacrificing = False
+            agent.sacrificial_target = None
+            return ExecutionStatus.FAILURE
+
+        # 3. Locate High-Value Assets
+        leader_pos = None
+        if getattr(agent, 'leader', None) is not None and not getattr(agent.leader, 'destroyed', False):
+            leader_pos = getattr(agent.leader, 'location', None)
+
+        base_pos = None
+        base_radius = 200.0
+        if getattr(agent, 'protected_area', None) is not None:
+            base_pos = getattr(agent.protected_area, 'pos', getattr(agent.protected_area, 'coordenates', None))
+            base_radius = getattr(agent.protected_area, 'radius', 200.0)
+
+        # 4. Search for active threat penetrating critical perimeter
+        most_critical_threat = None
+        min_breach_dist = float('inf')
+
+        for k in kamikazes:
+            if getattr(k, 'destroyed', False) or getattr(k, 'explode', False):
+                continue
+            k_pos = getattr(k, 'location', None)
+            if k_pos is None:
+                continue
+
+            is_breaching = False
+            breach_urgency = float('inf')
+
+            # Check leader breach
+            if leader_pos is not None:
+                d_lead = (k_pos - leader_pos).length()
+                if d_lead < self.critical_radius_leader:
+                    is_breaching = True
+                    breach_urgency = min(breach_urgency, d_lead)
+
+            # Check base breach
+            if base_pos is not None:
+                d_base = (k_pos - base_pos).length()
+                if d_base < (base_radius + self.critical_radius_base):
+                    is_breaching = True
+                    breach_urgency = min(breach_urgency, d_base)
+
+            if is_breaching and breach_urgency < min_breach_dist:
+                min_breach_dist = breach_urgency
+                most_critical_threat = k
+
+        # 5. If no critical asset is immediately threatened, fall back to formation escort
+        if most_critical_threat is None:
+            agent.is_sacrificing = False
+            agent.sacrificial_target = None
+            return ExecutionStatus.FAILURE
+
+        # 6. Intercept: Kinetic Ramming Pursuit
+        self.target_threat = most_critical_threat
+        agent.is_sacrificing = True
+        agent.sacrificial_target = most_critical_threat
+
+        # Lead-intercept prediction
+        k_vel = getattr(most_critical_threat, 'velocity', vec2(0, 0))
+        dist_to_threat = (most_critical_threat.location - agent.location).length()
+        t_intercept = dist_to_threat / max(agent.max_speed * 1.5, 1.0)
+        aim_point = most_critical_threat.location + k_vel * min(t_intercept, 25.0)
+
+        agent.seek(aim_point)
+        return ExecutionStatus.RUNNING
 
 
 class LoyalWingmanBehaviorTree(BehaviorTree):
     """
     Tactical Behavior Tree for Loyal Wingman escort UAVs in MUM-T defense.
-    Coordinates threat detection, escort formation keeping, and weapons engagement.
+    Coordinates threat detection, escort formation keeping, weapons engagement,
+    and last-resort sacrificial kinetic interception (body-block) when out of ammunition.
     """
     def __init__(self):
         super().__init__()
         root = self.root = SelectorNode("RootSelector")
+
+        # 1. Winchester Sacrificial Branch (Out-of-ammo emergency body-block)
+        root.add_child(SacrificialRammingNode())
+
+        # 2. Primary Standoff Engagement Sequence (Weapons & Escort)
         engagement_seq = SequenceNode("ThreatEngagementSequence")
         root.add_child(engagement_seq)
         engagement_seq.add_child(ChaseThreatNode())

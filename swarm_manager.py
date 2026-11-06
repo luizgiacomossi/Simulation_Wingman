@@ -56,9 +56,10 @@ class SwarmManager(object):
         Initializes the entire multi-UAV battlefield with leader, wingmen, kamikazes, and protected area.
         """
         if protected_area_pos is None:
-            protected_area_pos = vec2(WORLD_WIDTH - 100, min(170, WORLD_HEIGHT * 0.2))
+            # Centered on the middle of the right side (clean East defensive front)
+            protected_area_pos = vec2(WORLD_WIDTH - 200, WORLD_HEIGHT / 2)
         if protected_area_radius is None:
-            protected_area_radius = min(240, int(WORLD_HEIGHT * 0.26))
+            protected_area_radius = min(220, int(WORLD_HEIGHT * 0.24))
 
         self.num_loyalwingman = num_loyal
         self.num_kamikazes = num_kamikazes
@@ -105,6 +106,7 @@ class SwarmManager(object):
                 kv=kv
             )
             drone.index = d
+            drone.leader = self.leadingdrone
             drone.projectiles_pool = self.projectiles
             drone.set_message_bus(self.message_manager, agent_id=f"WINGMAN_{d}")
             self.swarm.append(drone)

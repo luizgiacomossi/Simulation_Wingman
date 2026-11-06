@@ -80,10 +80,9 @@ class Vehicle(object):
         # updates position
         self.location += self.velocity 
         # Prevents it from crazy spinning due to very low noise speeds
-        #if self.velocity.length() > 0.3:
-        #self.rotation = atan2(self.velocity.y,self.velocity.x) 
-        k = 2/3
-        self.rotation =  (atan2(self.velocity.y,self.velocity.x) - self.rotation)*k + self.rotation
+        if self.velocity.length() > 0.35:
+            k = 2/3
+            self.rotation = (atan2(self.velocity.y, self.velocity.x) - self.rotation) * k + self.rotation
         # Constrains position to limits of world 
         self.location = constrain(self.location,WORLD_WIDTH,WORLD_HEIGHT)
         self.acceleration *= 0
@@ -151,6 +150,12 @@ class Vehicle(object):
         self.desired = (target - self.location)
         # get the distance to the target
         d = self.desired.magnitude() 
+
+        # Deadband and smooth damping near target to prevent hunting/spinning
+        if d < 12.0:
+            self.velocity *= 0.85
+            self.acceleration *= 0.0
+            return
 
         try:
             dist = self.desired.normalize() # get direction
@@ -862,6 +867,12 @@ class LeadingDrone(Vehicle):
         # get the distance to the target
         d = self.desired.magnitude() 
 
+        # Deadband and smooth damping near target to prevent hunting/spinning
+        if d < 12.0:
+            self.velocity *= 0.85
+            self.acceleration *= 0.0
+            return
+
         try:
             dist = self.desired.normalize() # get direction
         except: # If magnitude of desired is zero it cant be normalized
@@ -1244,10 +1255,9 @@ class Kamikaze(Vehicle):
             self.location += self.velocity
 
         # Prevents it from crazy spinning due to very low noise speeds
-        #if self.velocity.length() > 0.3:
-        #self.rotation = atan2(self.velocity.y,self.velocity.x) 
-        k = 2/3
-        self.rotation =  (atan2(self.velocity.y,self.velocity.x) - self.rotation)*k + self.rotation
+        if self.velocity.length() > 0.35:
+            k = 2/3
+            self.rotation = (atan2(self.velocity.y, self.velocity.x) - self.rotation) * k + self.rotation
         # Constrains position to limits of world 
         self.location = constrain(self.location,WORLD_WIDTH,WORLD_HEIGHT)
         self.acceleration *= 0

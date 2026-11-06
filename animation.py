@@ -250,6 +250,10 @@ class ProtectedArea(object):
             self.all_sprites = None
             self.font24 = None
 
+    @property
+    def pos(self):
+        return self.coordenates
+
     def draw_legend(self):
         if self.window is None or self.font24 is None:
             return

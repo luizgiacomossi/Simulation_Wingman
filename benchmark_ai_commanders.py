@@ -62,6 +62,7 @@ def run_single_episode(engine: str = "baseline",
                        max_steps: int = 1800,
                        max_decisions: int = None,
                        continuous_waves: bool = False,
+                       survival_to_death: bool = False,
                        decision_interval_sec: float = 1.0,
                        num_wingmen: int = NUM_DRONES,
                        num_kamikazes: int = NUM_KAMIKAZES,
@@ -72,6 +73,9 @@ def run_single_episode(engine: str = "baseline",
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
+
+    if survival_to_death:
+        continuous_waves = True
 
     pg.init()
     if pg.display.get_surface() is None:
@@ -90,8 +94,18 @@ def run_single_episode(engine: str = "baseline",
     sim_ctx = HeadlessSimulationContext(sm)
 
     commander: LLMTacticalCommander = None
-    if engine in ("laya", "qwen"):
-        commander = LLMTacticalCommander(engine=engine, decision_interval=decision_interval_sec)
+    eng_lower = engine.lower()
+    if "laya" in eng_lower or "qwen" in eng_lower:
+        actual_engine = "laya" if "laya" in eng_lower else "qwen"
+        ablation = "full"
+        if "movement" in eng_lower:
+            ablation = "movement_only"
+        elif "formation" in eng_lower:
+            ablation = "formation_only"
+        elif "role" in eng_lower:
+            ablation = "roles_only"
+
+        commander = LLMTacticalCommander(engine=actual_engine, ablation_mode=ablation, decision_interval=decision_interval_sec)
         commander.enabled = True
 
     step = 0
@@ -100,6 +114,7 @@ def run_single_episode(engine: str = "baseline",
     formation_counts = {"CIRCLE": 0, "WALL": 0, "WEDGE": 0, "ECHELON": 0}
     decisions_count = 0
     total_waves_spawned = 1
+    wingmen_depleted_time = None
 
     t_start = time.perf_counter()
 
@@ -128,7 +143,7 @@ def run_single_episode(engine: str = "baseline",
                     snapshot = commander.build_telemetry_snapshot(sim_ctx)
                     
                     t_inf_0 = time.perf_counter()
-                    if engine == "laya":
+                    if commander.engine == "laya":
                         commander._async_query_laya(snapshot)
                     else:
                         commander._async_query_llm(snapshot)
@@ -166,8 +181,11 @@ def run_single_episode(engine: str = "baseline",
             end_reason = "Base Destroyed"
             break
         if len(sm.swarm) < 1:
-            end_reason = "All Loyal Destroyed"
-            break
+            if wingmen_depleted_time is None:
+                wingmen_depleted_time = sim_time
+            if not survival_to_death:
+                end_reason = "All Loyal Destroyed"
+                break
         if not continuous_waves and len(sm.kamikazes) == 0:
             end_reason = "All Threats Neutralized"
             break
@@ -200,7 +218,9 @@ def run_single_episode(engine: str = "baseline",
         "decisions_count": decisions_count,
         "avg_latency_ms": avg_lat,
         "p95_latency_ms": p95_lat,
-        "formations": formation_counts
+        "formations": formation_counts,
+        "wingmen_depleted_time": wingmen_depleted_time,
+        "total_waves": total_waves_spawned
     }
 
 
@@ -210,6 +230,7 @@ def run_benchmark_suite(engines: List[str] = ["baseline", "laya"],
                         max_steps: int = 1800,
                         max_decisions: int = None,
                         continuous_waves: bool = False,
+                        survival_to_death: bool = False,
                         num_wingmen: int = 4,
                         num_kamikazes: int = 4,
                         csv_output: str = "benchmark_results.csv") -> List[Dict[str, Any]]:
@@ -219,10 +240,12 @@ def run_benchmark_suite(engines: List[str] = ["baseline", "laya"],
     import csv
     print(f"\n================================================================================")
     print(f"  MUM-T TACTICAL CONTROLLER BENCHMARK SUITE")
-    print(f"  Engines: {', '.join(engines).upper()} | Mode: {mode.upper()} | Iterations: {episodes_per_engine}")
+    bench_type = "SURVIVAL TO DEATH (UNTIL BASE/LEADER FALLS)" if survival_to_death else f"WINDOWED ({max_steps * SAMPLE_TIME:.0f}s)"
+    print(f"  Type: {bench_type} | Mode: {mode.upper()} | Iterations: {episodes_per_engine}")
+    print(f"  Engines: {', '.join(engines).upper()}")
     if max_decisions:
-        print(f"  Quota: {max_decisions} Decisions per episode (Continuous Waves: {continuous_waves})")
-    print(f"  Forces: {num_wingmen} Loyal Wingmen vs {num_kamikazes} Kamikaze Hostiles")
+        print(f"  Quota: {max_decisions} Decisions per episode")
+    print(f"  Forces: {num_wingmen} Loyal Wingmen vs {num_kamikazes} Kamikaze Hostiles (Continuous: {continuous_waves or survival_to_death})")
     print(f"================================================================================\n")
 
     results = []
@@ -239,34 +262,50 @@ def run_benchmark_suite(engines: List[str] = ["baseline", "laya"],
                 max_steps=max_steps,
                 max_decisions=max_decisions,
                 continuous_waves=continuous_waves,
+                survival_to_death=survival_to_death,
                 num_wingmen=num_wingmen,
                 num_kamikazes=num_kamikazes,
                 seed=seed
             )
             data["iteration"] = ep
+            data["survival_to_death"] = survival_to_death
             eng_episodes.append(data)
             results.append(data)
 
-            stat_icon = "WIN" if data["victory"] else "LOSS"
-            print(f"   Iter {ep:03d}/{episodes_per_engine:03d} | [{stat_icon}] Base HP: {data['base_life']:3.0f}% | "
-                  f"KIA: {data['enemies_destroyed']}/{data['total_threats']} | Decisions: {data['decisions_count']} | "
-                  f"Latency: {data['avg_latency_ms']:5.1f}ms | Reason: {data['end_reason']}")
+            if survival_to_death:
+                wing_note = f"{data['wingmen_depleted_time']:.1f}s" if data.get('wingmen_depleted_time') else "Retained"
+                print(f"   Iter {ep:03d}/{episodes_per_engine:03d} | Survived: {data['sim_time']:5.1f}s | "
+                      f"KIA: {data['enemies_destroyed']:3d} | Waves: {data.get('total_waves', 1):2d} | "
+                      f"Wingmen Lost: {wing_note:<8} | Fell: {data['end_reason']}")
+            else:
+                stat_icon = "WIN" if data["victory"] else "LOSS"
+                print(f"   Iter {ep:03d}/{episodes_per_engine:03d} | [{stat_icon}] Base HP: {data['base_life']:3.0f}% | "
+                      f"KIA: {data['enemies_destroyed']}/{data['total_threats']} | Decisions: {data['decisions_count']} | "
+                      f"Latency: {data['avg_latency_ms']:5.1f}ms | Reason: {data['end_reason']}")
 
         # Summary for this engine
-        wins = sum(1 for d in eng_episodes if d["victory"])
-        avg_hp = np.mean([d["base_life"] for d in eng_episodes])
-        std_hp = np.std([d["base_life"] for d in eng_episodes])
         avg_kia = np.mean([d["enemies_destroyed"] for d in eng_episodes])
-        avg_surv = np.mean([d["loyal_survived"] for d in eng_episodes])
         avg_lat = np.mean([d["avg_latency_ms"] for d in eng_episodes if d["avg_latency_ms"] > 0] or [0])
-        print(f"   => [{eng.upper()}] Win Rate: {wins/episodes_per_engine*100:.1f}% | Base HP: {avg_hp:.1f}±{std_hp:.1f}% | "
-              f"Mean KIA: {avg_kia:.1f} | Avg Latency: {avg_lat:.1f}ms\n")
+
+        if survival_to_death:
+            surv_times = [d["sim_time"] for d in eng_episodes]
+            avg_surv = np.mean(surv_times)
+            std_surv = np.std(surv_times)
+            max_surv = np.max(surv_times)
+            print(f"   => [{eng.upper()}] Mean Survival: {avg_surv:5.1f}±{std_surv:4.1f}s (Max: {max_surv:5.1f}s) | "
+                  f"Mean KIA: {avg_kia:.1f} | Avg Latency: {avg_lat:.1f}ms\n")
+        else:
+            wins = sum(1 for d in eng_episodes if d["victory"])
+            avg_hp = np.mean([d["base_life"] for d in eng_episodes])
+            std_hp = np.std([d["base_life"] for d in eng_episodes])
+            print(f"   => [{eng.upper()}] Win Rate: {wins/episodes_per_engine*100:.1f}% | Base HP: {avg_hp:.1f}±{std_hp:.1f}% | "
+                  f"Mean KIA: {avg_kia:.1f} | Avg Latency: {avg_lat:.1f}ms\n")
 
     # Save to CSV
     if csv_output and results:
-        fieldnames = ["iteration", "engine", "mode", "victory", "base_life", "leader_alive",
-                      "enemies_destroyed", "total_threats", "loyal_survived", "decisions_count",
-                      "avg_latency_ms", "sim_time", "wall_time", "end_reason", "seed"]
+        fieldnames = ["iteration", "engine", "mode", "survival_to_death", "victory", "base_life", "leader_alive",
+                      "enemies_destroyed", "total_threats", "total_waves", "loyal_survived", "decisions_count",
+                      "avg_latency_ms", "sim_time", "wall_time", "wingmen_depleted_time", "end_reason", "seed"]
         with open(csv_output, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
@@ -280,37 +319,63 @@ def run_benchmark_suite(engines: List[str] = ["baseline", "laya"],
 def print_comparative_table(results: List[Dict[str, Any]]):
     """Prints a structured ASCII comparison table summarizing benchmark results."""
     engines = list(dict.fromkeys(r["engine"] for r in results))
+    is_survival = any(r.get("survival_to_death") for r in results)
 
-    print("=" * 88)
-    print(f"{'ENGINE':<12} | {'WIN RATE':<10} | {'BASE HP (MEAN±STD)':<20} | {'THREATS KIA':<12} | {'LATENCY':<12}")
-    print("=" * 88)
+    if is_survival:
+        print("=" * 100)
+        print(f"{'ENGINE':<14} | {'SURVIVAL (MEAN±STD)':<22} | {'MAX SURVIVAL':<14} | {'THREATS KIA':<12} | {'FALLEN (BASE/LEAD)':<20} | {'LATENCY':<10}")
+        print("=" * 100)
 
-    for eng in engines:
-        group = [r for r in results if r["engine"] == eng]
-        n = len(group)
-        win_rate = sum(1 for r in group if r["victory"]) / n * 100
-        mean_hp = np.mean([r["base_life"] for r in group])
-        std_hp = np.std([r["base_life"] for r in group])
-        mean_kia = np.mean([r["enemies_destroyed"] for r in group])
-        mean_surv = np.mean([r["loyal_survived"] for r in group])
-        lat_vals = [r["avg_latency_ms"] for r in group if r["avg_latency_ms"] > 0]
-        mean_lat = np.mean(lat_vals) if lat_vals else 0.0
+        for eng in engines:
+            group = [r for r in results if r["engine"] == eng]
+            surv_times = [r["sim_time"] for r in group]
+            mean_surv = np.mean(surv_times)
+            std_surv = np.std(surv_times)
+            max_surv = np.max(surv_times)
+            mean_kia = np.mean([r["enemies_destroyed"] for r in group])
+            lat_vals = [r["avg_latency_ms"] for r in group if r["avg_latency_ms"] > 0]
+            mean_lat = np.mean(lat_vals) if lat_vals else 0.0
 
-        print(f"{eng.upper():<12} | {win_rate:6.1f}%    | {mean_hp:5.1f}% ± {std_hp:4.1f}%     | "
-              f"{mean_kia:5.1f} KIA     | {mean_lat:6.1f} ms")
-    print("=" * 88 + "\n")
+            base_falls = sum(1 for r in group if "Base" in str(r.get("end_reason", "")))
+            lead_falls = sum(1 for r in group if "Leader" in str(r.get("end_reason", "")))
+            reason_str = f"Base: {base_falls:2d} | Lead: {lead_falls:2d}"
+
+            print(f"{eng.upper():<14} | {mean_surv:6.1f}s ± {std_surv:4.1f}s       | {max_surv:6.1f}s        | "
+                  f"{mean_kia:5.1f} KIA     | {reason_str:<20} | {mean_lat:6.1f} ms")
+        print("=" * 100 + "\n")
+    else:
+        print("=" * 88)
+        print(f"{'ENGINE':<12} | {'WIN RATE':<10} | {'BASE HP (MEAN±STD)':<20} | {'THREATS KIA':<12} | {'LATENCY':<12}")
+        print("=" * 88)
+
+        for eng in engines:
+            group = [r for r in results if r["engine"] == eng]
+            n = len(group)
+            win_rate = sum(1 for r in group if r["victory"]) / n * 100
+            mean_hp = np.mean([r["base_life"] for r in group])
+            std_hp = np.std([r["base_life"] for r in group])
+            mean_kia = np.mean([r["enemies_destroyed"] for r in group])
+            lat_vals = [r["avg_latency_ms"] for r in group if r["avg_latency_ms"] > 0]
+            mean_lat = np.mean(lat_vals) if lat_vals else 0.0
+
+            print(f"{eng.upper():<12} | {win_rate:6.1f}%    | {mean_hp:5.1f}% ± {std_hp:4.1f}%     | "
+                  f"{mean_kia:5.1f} KIA     | {mean_lat:6.1f} ms")
+        print("=" * 88 + "\n")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Headless Benchmark Suite for AI Swarm Commanders")
-    parser.add_argument("--engines", nargs="+", default=["baseline", "laya"], choices=["baseline", "laya", "qwen"],
-                        help="List of engines to evaluate")
+    parser.add_argument("--engines", nargs="+", default=["baseline", "laya"],
+                        choices=["baseline", "laya", "laya-full", "laya-movement", "laya-formation", "laya-roles", "qwen"],
+                        help="List of engines or ablation variants to evaluate")
     parser.add_argument("--iterations", "-i", "--episodes", type=int, default=10, dest="iterations",
                         help="Number of evaluation iterations/episodes (e.g. 10, 50, 100)")
     parser.add_argument("--mode", type=str, default="lockstep", choices=["lockstep", "realtime"],
                         help="Evaluation mode (lockstep: virtual-time synchronized; realtime: wall-clock paced)")
     parser.add_argument("--duration-sec", type=float, default=30.0,
                         help="Maximum combat duration per iteration in simulated seconds (default: 30s)")
+    parser.add_argument("--survival-to-death", "--until-death", action="store_true",
+                        help="Run each episode until the Base or Leader is destroyed (pure survival time-to-death)")
     parser.add_argument("--max-decisions", type=int, default=None,
                         help="Optional limit on decisions per iteration (e.g. 100)")
     parser.add_argument("--continuous-waves", action="store_true",
@@ -322,7 +387,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    max_steps = int(args.duration_sec / SAMPLE_TIME)
+    max_steps = 36000 if args.survival_to_death else int(args.duration_sec / SAMPLE_TIME)
 
     results = run_benchmark_suite(
         engines=args.engines,
@@ -330,7 +395,8 @@ if __name__ == "__main__":
         mode=args.mode,
         max_steps=max_steps,
         max_decisions=args.max_decisions,
-        continuous_waves=args.continuous_waves,
+        continuous_waves=args.continuous_waves or args.survival_to_death,
+        survival_to_death=args.survival_to_death,
         num_wingmen=args.wingmen,
         num_kamikazes=args.kamikazes,
         csv_output=args.csv
