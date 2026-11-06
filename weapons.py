@@ -179,6 +179,7 @@ class Weapon(object):
                  owner: Optional[Any] = None):
         self.cooldown = cooldown
         self.num_cartridges = num_cartridges
+        self.max_cartridges = num_cartridges
         self.rate_of_fire = rate_of_fire
         self.range_of_fire = range_of_fire
         self.kamikazes = target_list if target_list is not None else []
@@ -233,6 +234,14 @@ class Weapon(object):
 
     def reload(self):
         """Replenishes weapon ammo or resets cooldown cycle."""
+        self.available = True
+
+    def rearm(self, amount: Optional[int] = None):
+        """Replenishes weapon cartridges back to full capacity or specified amount."""
+        if amount is not None:
+            self.num_cartridges = amount
+        else:
+            self.num_cartridges = getattr(self, 'max_cartridges', 10)
         self.available = True
 
     def get_ammo_available(self) -> int:

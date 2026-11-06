@@ -66,5 +66,9 @@ PROB_FREEZING = 0.85
 # explosion parameteres
 TIME_EXPLOSION = 0.3
 
+# Logistics & Replenishment (RTB)
+ENABLE_WINGMAN_RTB = False  # Opt-in toggle: wingmen return to base when out of ammo
+RTB_REARM_DURATION = 3.0    # Seconds required inside base perimeter to reload weapons
+
 # Experiment & Telemetry Saving
 SAVE_RESULTS = True

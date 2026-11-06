@@ -169,7 +169,8 @@ class Simulation(object):
                         kp= 0.625, 
                         kv= 4.5, 
                         distance_formation = DISTANCE_LEADER, 
-                        distance_rings_formation = 1.2):
+                        distance_rings_formation = 1.2,
+                        enable_rtb = False):
         self.swarm_manager.create_swarm(
             num_loyal=num_swarm,
             num_kamikazes=num_kamikazes,
@@ -177,7 +178,8 @@ class Simulation(object):
             kp=kp,
             kv=kv,
             distance_formation=distance_formation,
-            distance_rings_formation=distance_rings_formation
+            distance_rings_formation=distance_rings_formation,
+            enable_rtb=enable_rtb
         )
 
     def add_new_kamikaze(self, pos=None):

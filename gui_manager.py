@@ -1,5 +1,6 @@
 import math
 import os
+import time
 import pygame as pg
 from constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT,
@@ -236,7 +237,66 @@ class GUIManager:
                     t_sac = self.font_mono_small.render("SACRIFICE [RAMMING]", True, (239, 68, 68))
                     world_surface.blit(t_sac, (dx - 20, dy - 18))
 
-        # 3. Selected Agent Overlays
+        # 3. Return-to-Base (RTB) Logistics & Reloading Animation
+        now_sec = time.time()
+        base = getattr(simulation.swarm_manager, 'protected_area', None)
+        base_pos = getattr(base, 'pos', getattr(base, 'coordenates', None)) if base else None
+
+        for drone in getattr(simulation.swarm_manager, 'swarm', []):
+            if getattr(drone, 'is_rtb', False):
+                dx, dy = int(drone.location.x), int(drone.location.y)
+                is_rearming = getattr(drone, 'is_rearming', False)
+                progress = getattr(drone, 'rtb_progress', 0.0)
+
+                if is_rearming:
+                    # --- A. Inside Base Pad: Glowing Rearm Animation ---
+                    # 1. Pulsing tech halo ring around drone
+                    pulse_r = 22 + int(3.5 * math.sin(now_sec * 8.0))
+                    pg.draw.circle(world_surface, (45, 212, 191), (dx, dy), pulse_r, width=1)
+
+                    # 2. Circular progress arc (radial fill)
+                    arc_rect = pg.Rect(dx - 24, dy - 24, 48, 48)
+                    start_angle = -math.pi / 2.0
+                    sweep_angle = max(0.05, progress * 2.0 * math.pi)
+                    pg.draw.arc(world_surface, (56, 189, 248), arc_rect, start_angle, start_angle + sweep_angle, width=3)
+
+                    # 3. Floating Micro-Progress Bar
+                    bar_w, bar_h = 48, 5
+                    bx, by = dx - bar_w // 2, dy - 34
+                    pg.draw.rect(world_surface, (15, 23, 42), (bx, by, bar_w, bar_h))
+                    fill_w = int(bar_w * progress)
+                    if fill_w > 0:
+                        pg.draw.rect(world_surface, (45, 212, 191), (bx, by, fill_w, bar_h))
+                    pg.draw.rect(world_surface, (94, 234, 212), (bx, by, bar_w, bar_h), width=1)
+
+                    # 4. Animated rising energy munition pips (upward drifting cartridges)
+                    for i in range(3):
+                        spark_offset = ((now_sec * 50.0 + i * 16.0) % 24.0)
+                        spark_x = dx - 10 + i * 10
+                        spark_y = dy + 14 - int(spark_offset)
+                        pg.draw.circle(world_surface, (56, 189, 248), (spark_x, spark_y), 2)
+
+                    # 5. Text Label
+                    pct_str = f"REARMING {int(progress * 100)}%"
+                    t_rearm = self.font_mono_small.render(pct_str, True, (45, 212, 191))
+                    world_surface.blit(t_rearm, (dx - t_rearm.get_width() // 2, by - 14))
+
+                elif base_pos is not None:
+                    # --- B. Inbound Transit: Datalink Vector to Base ---
+                    bx, by = int(base_pos.x), int(base_pos.y)
+                    # Tactical teal flightpath line
+                    pg.draw.line(world_surface, (45, 212, 191), (dx, dy), (bx, by), 1)
+                    # Chevron / dot along the route
+                    interp_t = (now_sec * 0.8) % 1.0
+                    ix = int(dx + (bx - dx) * interp_t)
+                    iy = int(dy + (by - dy) * interp_t)
+                    pg.draw.circle(world_surface, (94, 234, 212), (ix, iy), 3)
+
+                    # Text tag above transit drone
+                    t_inbound = self.font_mono_small.render("RTB INBOUND", True, (45, 212, 191))
+                    world_surface.blit(t_inbound, (dx - t_inbound.get_width() // 2, dy - 20))
+
+        # 4. Selected Agent Overlays
         if self.selected_agent is None:
             return
 
@@ -624,6 +684,10 @@ class GUIManager:
         elif self.selected_type == "Loyal Wingman":
             role = getattr(agent, 'tactical_role', 'INTERCEPTOR')
             rows.append(("TAC ROLE:", f"{role}", (56, 189, 248) if role == "INTERCEPTOR" else (251, 191, 36)))
+
+            if getattr(agent, 'is_rtb', False):
+                rtb_st = getattr(agent, 'rtb_status', 'RTB ACTIVE')
+                rows.append(("LOGISTICS:", f"{rtb_st}", (45, 212, 191)))
 
             assigned = getattr(agent, 'assigned_threat', None)
             if assigned is not None and hasattr(assigned, 'location'):

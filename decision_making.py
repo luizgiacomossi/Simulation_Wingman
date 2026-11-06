@@ -99,11 +99,112 @@ class SacrificialRammingNode(LeafNode):
         return ExecutionStatus.RUNNING
 
 
+class ReturnToBaseNode(LeafNode):
+    """
+    Directs a Winchester (out-of-ammo) Loyal Wingman back to the Protected Area
+    for tactical replenishment and rearming, when RTB is enabled.
+    """
+    def __init__(self, rearm_duration: float = RTB_REARM_DURATION):
+        super().__init__("ReturnToBase")
+        self.rearm_duration = rearm_duration
+        self.rearm_timer = 0.0
+        self.is_rearming = False
+
+    def enter(self, agent):
+        self.rearm_timer = 0.0
+        self.is_rearming = False
+
+    def execute(self, agent):
+        # 1. Check if RTB capability is enabled (opt-in; preserves legacy baseline)
+        if not getattr(agent, 'enable_rtb', False):
+            agent.is_rtb = False
+            agent.rtb_status = ""
+            return ExecutionStatus.FAILURE
+
+        # 2. Check if agent is actually out of ammo in all weapon systems (Winchester)
+        vap_ammo = agent.vaporizer_gun.get_ammo_available() if hasattr(agent, 'vaporizer_gun') else 0
+        frz_ammo = agent.freezing_gun.get_ammo_available() if hasattr(agent, 'freezing_gun') else 0
+        if vap_ammo > 0 or frz_ammo > 0:
+            agent.is_rtb = False
+            agent.rtb_status = ""
+            self.rearm_timer = 0.0
+            self.is_rearming = False
+            return ExecutionStatus.FAILURE
+
+        # 3. Check if base exists and is active
+        base = getattr(agent, 'protected_area', None)
+        if base is None:
+            agent.is_rtb = False
+            agent.rtb_status = ""
+            return ExecutionStatus.FAILURE
+        if hasattr(base, 'is_active') and not base.is_active():
+            agent.is_rtb = False
+            agent.rtb_status = ""
+            return ExecutionStatus.FAILURE
+
+        base_pos = getattr(base, 'pos', getattr(base, 'coordenates', None))
+        base_radius = getattr(base, 'radius', 200.0)
+        if base_pos is None:
+            agent.is_rtb = False
+            agent.rtb_status = ""
+            return ExecutionStatus.FAILURE
+
+        # 4. Check distance to base
+        dist_to_base = (agent.location - base_pos).length()
+
+        # If inside base perimeter, begin / continue rearming
+        if dist_to_base <= (base_radius * 0.75):
+            self.is_rearming = True
+            self.rearm_timer += SAMPLE_TIME
+            agent.is_rtb = True
+            agent.is_rearming = True
+            agent.rtb_progress = min(1.0, self.rearm_timer / max(0.1, self.rearm_duration))
+            time_left = max(0.0, self.rearm_duration - self.rearm_timer)
+            agent.rtb_status = f"REARMING {time_left:.1f}s"
+
+            # Smoothly damp velocity inside base pad
+            agent.velocity *= 0.82
+            agent.acceleration *= 0.0
+
+            if self.rearm_timer >= self.rearm_duration:
+                # Fully replenish weapon cartridges
+                if hasattr(agent, 'vaporizer_gun') and hasattr(agent.vaporizer_gun, 'rearm'):
+                    agent.vaporizer_gun.rearm()
+                elif hasattr(agent, 'vaporizer_gun'):
+                    agent.vaporizer_gun.num_cartridges = getattr(agent.vaporizer_gun, 'max_cartridges', CARTRIDGES_VAPORIZER)
+                    agent.vaporizer_gun.available = True
+
+                if hasattr(agent, 'freezing_gun') and hasattr(agent.freezing_gun, 'rearm'):
+                    agent.freezing_gun.rearm()
+                elif hasattr(agent, 'freezing_gun'):
+                    agent.freezing_gun.num_cartridges = getattr(agent.freezing_gun, 'max_cartridges', CARTRIDGES_FREEZING)
+                    agent.freezing_gun.available = True
+
+                agent.is_rtb = False
+                agent.is_rearming = False
+                agent.rtb_progress = 1.0
+                agent.rtb_status = "REARMED"
+                self.rearm_timer = 0.0
+                self.is_rearming = False
+                return ExecutionStatus.SUCCESS
+
+            return ExecutionStatus.RUNNING
+        else:
+            # Transit flight to protected base pad
+            self.is_rearming = False
+            agent.is_rtb = True
+            agent.is_rearming = False
+            agent.rtb_progress = 0.0
+            agent.rtb_status = "RTB INBOUND"
+            agent.arrive(base_pos)
+            return ExecutionStatus.RUNNING
+
+
 class LoyalWingmanBehaviorTree(BehaviorTree):
     """
     Tactical Behavior Tree for Loyal Wingman escort UAVs in MUM-T defense.
     Coordinates threat detection, escort formation keeping, weapons engagement,
-    and last-resort sacrificial kinetic interception (body-block) when out of ammunition.
+    last-resort sacrificial kinetic interception, and optional base replenishment (RTB).
     """
     def __init__(self):
         super().__init__()
@@ -112,7 +213,10 @@ class LoyalWingmanBehaviorTree(BehaviorTree):
         # 1. Winchester Sacrificial Branch (Out-of-ammo emergency body-block)
         root.add_child(SacrificialRammingNode())
 
-        # 2. Primary Standoff Engagement Sequence (Weapons & Escort)
+        # 2. Return-To-Base Logistics Branch (Optional rearm when out of ammo and perimeter is safe)
+        root.add_child(ReturnToBaseNode())
+
+        # 3. Primary Standoff Engagement Sequence (Weapons & Escort)
         engagement_seq = SequenceNode("ThreatEngagementSequence")
         root.add_child(engagement_seq)
         engagement_seq.add_child(ChaseThreatNode())
