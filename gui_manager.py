@@ -363,6 +363,22 @@ class GUIManager:
         screen.blit(t_lead_val, (x, y_text))
         x += t_lead_val.get_width() + 18
 
+        # 6.5 LLM Autonomous Commander Status
+        if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
+            llm_stat = simulation.llm_commander.get_hud_status()
+            llm_on = llm_stat.get("enabled", False)
+            llm_flight = llm_stat.get("in_flight", False)
+            llm_text = "THINKING..." if llm_flight else ("AI: ON" if llm_on else "AI: OFF")
+            llm_col = (250, 204, 21) if llm_flight else ((56, 189, 248) if llm_on else (100, 116, 139))
+
+            pg.draw.line(screen, (30, 41, 59), (x - 9, 6), (x - 9, self.top_bar_height - 7), 1)
+            t_llm_lbl = self.font_label.render("COMMAND:", True, (100, 116, 139))
+            t_llm_val = self.font_mono.render(llm_text, True, llm_col)
+            screen.blit(t_llm_lbl, (x, y_text + 1))
+            x += t_llm_lbl.get_width() + 5
+            screen.blit(t_llm_val, (x, y_text))
+            x += t_llm_val.get_width() + 18
+
         # 7. Iteration / Episode (Far Right)
         iter_str = f"EPISODE #{history.iterations + 1}  |  ZOOM {display_manager.zoom_level:.2f}x"
         t_iter = self.font_mono_small.render(iter_str, True, (100, 116, 139))
@@ -379,6 +395,7 @@ class GUIManager:
         shortcuts = [
             ("SPACE", "Pause/Resume"),
             ("1-4", "Formation"),
+            ("L", "AI Leader"),
             ("L-Click", "Select/Move"),
             ("R-Click", "Spawn Threat"),
             ("C", "Center View"),

@@ -13,6 +13,7 @@ from display_manager import DisplayManager
 from experiment_manager import ExperimentManager
 from swarm_manager import SwarmManager
 from gui_manager import GUIManager
+from llm_commander import LLMTacticalCommander
 import matplotlib.pyplot as plt
 import statistics
 
@@ -58,6 +59,11 @@ class ProcessorUserInput:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_c:
                 if hasattr(self.simulation, 'leadingdrone') and hasattr(self.simulation.leadingdrone, 'location'):
                     self.simulation.screenSimulation.center_on(self.simulation.leadingdrone.location)
+
+            # Key 'l' pressed -> Toggle Autonomous LLM Tactical Commander
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
+                if hasattr(self.simulation, 'llm_commander') and self.simulation.llm_commander is not None:
+                    self.simulation.llm_commander.toggle()
 
             # Key '0' or 'HOME' -> Reset zoom/pan
             if event.type == pygame.KEYDOWN and (event.key == pygame.K_0 or event.key == pygame.K_HOME):
@@ -123,6 +129,7 @@ class Simulation(object):
         self.is_paused = False
         self.gui_manager = GUIManager() if self.canvas is not None else None
         self.swarm_manager = SwarmManager(window=self.canvas)
+        self.llm_commander = LLMTacticalCommander()
 
     @property
     def swarm(self):
@@ -187,6 +194,8 @@ class Simulation(object):
         if not self.is_paused:
             for _ in range(accelerated_factor):
                 self.swarm_manager.update(list_obst)
+                if hasattr(self, 'llm_commander') and self.llm_commander is not None:
+                    self.llm_commander.update(self.swarm_manager.simulation_time, self)
 
         if self.canvas is not None:
             self.swarm_manager.draw(self.canvas, self.screenSimulation)
