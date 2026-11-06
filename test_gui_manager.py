@@ -231,5 +231,54 @@ class TestGUIManager(unittest.TestCase):
         print(f"\n✓ 500 HUD frames rendered in {elapsed_ms:.1f}ms ({fps:.0f} FPS).")
         self.assertTrue(fps > 500, f"HUD render FPS too low: {fps}")
 
+    def test_ai_commander_hud_card_rendering(self):
+        """Verifies that the dedicated AI Commander HUD card renders cleanly in all states."""
+        class MockCommander:
+            def __init__(self, enabled=True, is_thinking=False):
+                self.enabled = enabled
+                self.is_thinking = is_thinking
+                self.last_decision = {
+                    "formation": "ECHELON_RIGHT",
+                    "num_interceptors": 2,
+                    "num_close_escorts": 2,
+                    "target_priority_order": ["KAMI_01", "KAMI_02"],
+                    "leader_action": "ORBIT_DEFENSIVE",
+                    "tactical_rationale": "High-threat pincer formation detected. Commencing pincer defense."
+                }
+                self.last_latency = 1.15
+                self.total_decisions = 4
+                self.last_error = None
+
+            def get_hud_status(self):
+                return {
+                    "enabled": self.enabled,
+                    "in_flight": self.is_thinking,
+                    "is_thinking": self.is_thinking,
+                    "last_formation": self.last_decision.get("formation"),
+                    "last_latency": self.last_latency,
+                    "last_target": self.last_decision["target_priority_order"][0],
+                    "last_action": self.last_decision["leader_action"],
+                    "num_interceptors": self.last_decision["num_interceptors"],
+                    "num_close_escorts": self.last_decision["num_close_escorts"],
+                    "rationale": self.last_decision["tactical_rationale"],
+                    "total_decisions": self.total_decisions,
+                    "error": self.last_error
+                }
+
+            get_status_summary = get_hud_status
+
+        # 1. Active state
+        self.sim.llm_commander = MockCommander(enabled=True, is_thinking=False)
+        self.gui.draw_screen_hud(self.screen, self.sim, self.display, 10.0, self.history)
+
+        # 2. Thinking state
+        self.sim.llm_commander.is_thinking = True
+        self.gui.draw_screen_hud(self.screen, self.sim, self.display, 10.5, self.history)
+
+        # 3. Offline state
+        self.sim.llm_commander.enabled = False
+        self.sim.llm_commander.is_thinking = False
+        self.gui.draw_screen_hud(self.screen, self.sim, self.display, 11.0, self.history)
+
 if __name__ == "__main__":
     unittest.main()

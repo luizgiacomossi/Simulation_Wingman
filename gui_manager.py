@@ -269,6 +269,10 @@ class GUIManager:
         if self.selected_agent is not None:
             self._draw_agent_inspector(screen, simulation)
 
+        # 5. Dedicated AI Tactical Commander HUD Card (Top-Left)
+        if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
+            self._draw_ai_commander_card(screen, simulation)
+
     # Backward compatibility alias for tests
     def _draw_mission_card(self, screen, simulation, display_manager, time_running, history):
         self._draw_top_status_bar(screen, simulation, display_manager, time_running, history)
@@ -647,3 +651,131 @@ class GUIManager:
 
         t_cnt = self.font_mono_small.render(f"{ammo:02d}/{max_ammo:02d}", True, (148, 163, 184))
         screen.blit(t_cnt, (x + max_ammo * (pip_w + pip_gap) + 14, pip_y - 2))
+
+    def _draw_ai_commander_card(self, screen, simulation):
+        """
+        Renders a dedicated tactical HUD card for the AI Commander (Qwen 3.5 SLM).
+        Displays real-time tactical decisions: formation doctrine, role distribution,
+        priority target locks, leader action, inference latency, and operational rationale.
+        """
+        commander = simulation.llm_commander
+        if commander is None:
+            return
+
+        summary = commander.get_status_summary()
+
+        # Layout parameters (top-left, docked below top status bar)
+        card_x = 16
+        card_y = self.top_bar_height + 10
+        card_w = 400
+        card_h = 175 if summary["enabled"] else 68
+        card_rect = pg.Rect(card_x, card_y, card_w, card_h)
+
+        # Background panel & border
+        pg.draw.rect(screen, (10, 14, 22), card_rect)
+        pg.draw.rect(screen, (30, 41, 59), card_rect, 1)
+
+        # Header bar
+        header_h = 26
+        pg.draw.rect(screen, (15, 23, 42), (card_x, card_y, card_w, header_h))
+        pg.draw.line(screen, (30, 41, 59), (card_x, card_y + header_h), (card_x + card_w, card_y + header_h), 1)
+
+        # Header title
+        t_header = self.font_header.render("AI TACTICAL COMMANDER // QWEN-3.5", True, (251, 191, 36) if summary["enabled"] else (148, 163, 184))
+        screen.blit(t_header, (card_x + 10, card_y + 5))
+
+        # Status Pill (Right side of header)
+        if not summary["enabled"]:
+            pill_text = "OFFLINE [L]"
+            pill_bg = (30, 41, 59)
+            pill_border = (51, 65, 85)
+            pill_fg = (148, 163, 184)
+        elif summary["is_thinking"]:
+            # Pulsing amber indicator
+            alpha_pulse = int(180 + 75 * math.sin(self.pulse_phase * 2.5))
+            pill_text = "THINKING..."
+            pill_bg = (66, 32, 6)
+            pill_border = (251, 191, 36)
+            pill_fg = (251, 191, 36)
+        else:
+            pill_text = "ACTIVE"
+            pill_bg = (8, 47, 73)
+            pill_border = (56, 189, 248)
+            pill_fg = (56, 189, 248)
+
+        t_pill = self.font_key.render(pill_text, True, pill_fg)
+        pw = t_pill.get_width() + 12
+        ph = 18
+        px = card_x + card_w - pw - 8
+        py = card_y + 4
+        pg.draw.rect(screen, pill_bg, (px, py, pw, ph), border_radius=3)
+        pg.draw.rect(screen, pill_border, (px, py, pw, ph), width=1, border_radius=3)
+        screen.blit(t_pill, (px + 6, py + 2))
+
+        # Card body content
+        if not summary["enabled"]:
+            msg = self.font_meta.render("Commander offline. Press [L] or toggle via status bar to activate.", True, (100, 116, 139))
+            screen.blit(msg, (card_x + 12, card_y + header_h + 10))
+            return
+
+        # Rows when active
+        y = card_y + header_h + 8
+        val_x = card_x + 120
+
+        form_val = summary["last_formation"]
+        n_inter = summary["num_interceptors"]
+        n_escort = summary["num_close_escorts"]
+        roles_val = f"{n_inter} INT / {n_escort} ESC" if (n_inter + n_escort) > 0 else "BALANCED / AUTO"
+        target_val = summary["last_target"]
+        action_val = summary["last_action"]
+        lat_val = f"{summary['last_latency']:.2f}s" if summary["last_latency"] > 0 else "BENCHMARKING"
+        cycle_val = f"#{summary['total_decisions']} ({lat_val})"
+
+        rows = [
+            ("FORMATION:", form_val, (56, 189, 248)),
+            ("ROLE SPLIT:", roles_val, (74, 222, 128)),
+            ("PRIORITY TGT:", target_val, (248, 113, 113) if target_val != "N/A" else (148, 163, 184)),
+            ("LEAD ACTION:", action_val, (251, 191, 36)),
+            ("CYCLE / LAT:", cycle_val, (148, 163, 184)),
+        ]
+
+        for lbl, val, col in rows:
+            t_lbl = self.font_label.render(lbl, True, (100, 116, 139))
+            t_val = self.font_mono.render(val, True, col)
+            screen.blit(t_lbl, (card_x + 10, y))
+            screen.blit(t_val, (val_x, y))
+            y += 18
+
+        # Divider line
+        y += 2
+        pg.draw.line(screen, (30, 41, 59), (card_x + 10, y), (card_x + card_w - 10, y), 1)
+        y += 5
+
+        # Tactical Rationale quote (trimmed/wrapped cleanly)
+        rationale_raw = summary["rationale"] or "Establishing air supremacy perimeter..."
+        # Wrap rationale text to fit card width
+        words = rationale_raw.split()
+        lines = []
+        curr_line = ""
+        for word in words:
+            test_line = f"{curr_line} {word}".strip()
+            if self.font_meta.size(test_line)[0] < (card_w - 24):
+                curr_line = test_line
+            else:
+                if curr_line:
+                    lines.append(curr_line)
+                curr_line = word
+            if len(lines) >= 2:
+                break
+        if curr_line and len(lines) < 2:
+            lines.append(curr_line)
+
+        # Truncate second line if still more words exist
+        if len(lines) == 2 and words.index(lines[-1].split()[-1]) < len(words) - 1:
+            lines[-1] = lines[-1][:45].rstrip() + "..."
+
+        for r_line in lines:
+            t_rat = self.font_meta.render(f"\"{r_line}\"" if r_line == lines[0] else f" {r_line}\"", True, (203, 213, 225))
+            screen.blit(t_rat, (card_x + 12, y))
+            y += 15
+

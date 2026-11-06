@@ -303,11 +303,16 @@ class LLMTacticalCommander:
         return {
             "enabled": self.enabled,
             "in_flight": self.is_request_in_flight,
+            "is_thinking": self.is_request_in_flight,
             "last_formation": self.last_decision.get("selected_formation", "N/A") if self.last_decision else "N/A",
             "last_latency": self.last_latency,
             "last_target": self.last_decision.get("target_priority_order", ["N/A"])[0] if self.last_decision and self.last_decision.get("target_priority_order") else "N/A",
             "last_action": self.last_decision.get("leader_action", "N/A") if self.last_decision else "N/A",
+            "num_interceptors": self.last_decision.get("num_interceptors", 0) if self.last_decision else 0,
+            "num_close_escorts": self.last_decision.get("num_close_escorts", 0) if self.last_decision else 0,
             "rationale": self.last_decision.get("tactical_rationale", "") if self.last_decision else "",
             "total_decisions": self.total_decisions,
             "error": self.last_error
         }
+
+    get_status_summary = get_hud_status
