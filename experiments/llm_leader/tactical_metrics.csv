@@ -1,0 +1,7 @@
+scenario_id,scenario_name,decision_latency_sec,tokens_per_second,prompt_tokens,completion_tokens,total_tokens,json_valid,selected_formation,formation_score,interceptors_assigned,escorts_assigned,allocation_score,top_priority_target,priority_score,leader_action,leader_action_score,total_tactical_score
+1,Massive Frontal Wave Attack,5.64,22.5,912,127,1039,True,WALL,25,4,4,18,K1,15,HOLD_DEFENSIVE,20,78
+2,360-Degree Omnidirectional Pincer Attack,5.75,24.01,921,138,1059,True,CIRCLE,25,6,2,25,K_NORTH,30,HOLD_DEFENSIVE,20,100
+3,Critical Base Penetration (Protected Area Breach),5.03,23.68,803,119,922,True,WALL,25,4,3,25,K_BREACH,30,EVADE_RETREAT,20,100
+4,High-Speed Lateral Flank Ambush,4.76,23.3,793,111,904,True,ECHELON,25,4,4,18,K_FLANK_LEAD,30,EVADE_RETREAT,20,93
+5,Resource-Constrained Attrition Defense,6.44,25.48,956,164,1120,True,CIRCLE,25,2,1,25,K_SWARM_1,30,ORBIT_BASE,20,100
+6,Tactical Decoy & Divergence Strike,5.75,25.22,862,145,1007,True,WALL,25,6,2,25,K_STRIKE_1,30,HOLD_DEFENSIVE,20,100
