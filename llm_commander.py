@@ -6,6 +6,7 @@ Decoupled architecture: operates via background thread workers and broadcasts co
 over the decentralized Tactical Datalink Bus (MessageManager).
 """
 
+import sys
 import json
 import time
 import math
@@ -54,6 +55,7 @@ class LLMTacticalCommander:
     Asynchronous Tactical Commander connecting the simulation to local SLM/LLM inference.
     Executes in a separate daemon thread to guarantee zero frame drops in 60 FPS Pygame physics.
     """
+    persistent_enabled: bool = ("--llm" in sys.argv or "--ai" in sys.argv)
 
     def __init__(self,
                  api_url: str = "http://127.0.0.1:1234/v1/chat/completions",
@@ -65,7 +67,7 @@ class LLMTacticalCommander:
         self.decision_interval = decision_interval
         self.timeout = timeout
 
-        self.enabled = False
+        self.enabled = LLMTacticalCommander.persistent_enabled
         self.is_request_in_flight = False
         self.last_decision_time = -999.0
         self.last_decision: Optional[Dict[str, Any]] = None
@@ -77,8 +79,9 @@ class LLMTacticalCommander:
         self._pending_decision: Optional[Dict[str, Any]] = None
 
     def toggle(self) -> bool:
-        """Toggles LLM Commander active state."""
+        """Toggles LLM Commander active state and preserves across episode resets."""
         self.enabled = not self.enabled
+        LLMTacticalCommander.persistent_enabled = self.enabled
         print(f"[LLM Commander] State changed: {'ENABLED' if self.enabled else 'DISABLED'}")
         return self.enabled
 

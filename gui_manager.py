@@ -105,6 +105,10 @@ class GUIManager:
             if event.key == pg.K_h:
                 self.visible = not self.visible
                 return True
+            if event.key == pg.K_l:
+                if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
+                    simulation.llm_commander.toggle()
+                    return True
             if event.key == pg.K_ESCAPE:
                 if self.selected_agent is not None:
                     self.selected_agent = None
@@ -115,6 +119,12 @@ class GUIManager:
 
         if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = vec2(event.pos[0], event.pos[1])
+
+            # 0. Click on Top Status Bar or Bottom Bar -> Toggle AI or prevent world click leak
+            if self.top_bar_rect.collidepoint(event.pos) or self.bottom_bar_rect.collidepoint(event.pos):
+                if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
+                    simulation.llm_commander.toggle()
+                return True
 
             # 1. Click on Radar Scope -> Center camera
             if self.minimap_rect.collidepoint(event.pos):
