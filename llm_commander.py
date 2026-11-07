@@ -237,6 +237,9 @@ class LLMTacticalCommander:
     def _get_laya_agent(self):
         """Lazy-loads Convai Laya model onto Apple Silicon MPS or CPU once and caches across instances."""
         if LLMTacticalCommander._cached_laya_agent is None:
+            import os
+            # Use cached local weights without querying remote HuggingFace Hub every run
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
             import laya
             import torch
             device = 'mps' if torch.backends.mps.is_available() else 'cpu'

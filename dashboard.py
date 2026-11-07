@@ -7,9 +7,13 @@ Phase 3 of the Loyal Wingman Research Platform:
 - Operator Co-Pilot Console for natural language and tactical command dispatch.
 """
 
+import os
 import sys
 import time
+import subprocess
+import threading
 import multiprocessing as mp
+from multiprocessing.connection import Listener, Client
 from queue import Empty
 import tkinter as tk
 from tkinter import ttk, scrolledtext
@@ -370,17 +374,31 @@ def run_dashboard_process(telemetry_queue: mp.Queue, command_queue: mp.Queue):
     """Entry point for child Tkinter dashboard process."""
     root = tk.Tk()
     app = TacticalDashboardApp(root, telemetry_queue, command_queue)
+
+    # Force window to the foreground on macOS Aqua/Cocoa
+    try:
+        root.lift()
+        root.attributes("-topmost", True)
+        root.after(800, lambda: root.attributes("-topmost", False))
+        root.focus_force()
+    except Exception:
+        pass
+
     root.mainloop()
 
 
 class DashboardBridge:
     """
-    Simulation-side bridge managing IPC queues and child process lifecycle.
+    Simulation-side bridge managing IPC queues and clean OS child process lifecycle.
+    Uses loopback socket IPC to avoid macOS Aqua/Cocoa multiprocessing restrictions.
     """
     def __init__(self, enabled: bool = True):
         self.enabled = enabled
         self.telemetry_queue = None
         self.command_queue = None
+        self.listener = None
+        self.conn = None
+        self.ipc_thread = None
         self.process = None
         self.last_telemetry_time = 0.0
         self.telemetry_interval = 0.1  # 10 Hz telemetry export
@@ -390,18 +408,48 @@ class DashboardBridge:
             self.start()
 
     def start(self):
-        """Launches dashboard process."""
+        """Launches dashboard process via Popen + Localhost IPC to avoid Cocoa multiprocessing restrictions."""
         try:
-            # mp.set_start_method("spawn", force=False)
             self.telemetry_queue = mp.Queue(maxsize=100)
             self.command_queue = mp.Queue(maxsize=100)
-            self.process = mp.Process(
-                target=run_dashboard_process,
-                args=(self.telemetry_queue, self.command_queue),
-                daemon=True
+
+            # Bind dynamic TCP port on loopback
+            self.listener = Listener(('127.0.0.1', 0), authkey=b'mumt_c2')
+            port = self.listener.address[1]
+
+            script_path = os.path.abspath(__file__)
+            # Launch clean, independent OS process
+            self.process = subprocess.Popen(
+                [sys.executable, script_path, "--port", str(port)]
             )
-            self.process.start()
-            print(f"[DashboardBridge] C2 Dashboard launched in PID {self.process.pid}.")
+            print(f"[DashboardBridge] C2 Dashboard launched in clean OS process (PID {self.process.pid}, port {port}).")
+
+            # Background worker thread to shuttle data between Queues and TCP socket
+            def _ipc_worker():
+                try:
+                    self.conn = self.listener.accept()
+                    print(f"[DashboardBridge] C2 Dashboard IPC channel established.")
+                    while self.enabled and self.conn:
+                        # 1. Forward outgoing telemetry
+                        try:
+                            while True:
+                                packet = self.telemetry_queue.get_nowait()
+                                self.conn.send(packet)
+                        except Empty:
+                            pass
+
+                        # 2. Forward incoming commands
+                        if self.conn.poll(0.02):
+                            cmd = self.conn.recv()
+                            self.command_queue.put(cmd)
+                        else:
+                            time.sleep(0.01)
+                except Exception:
+                    pass
+
+            self.ipc_thread = threading.Thread(target=_ipc_worker, daemon=True)
+            self.ipc_thread.start()
+
         except Exception as e:
             print(f"[DashboardBridge] Warning: could not launch Tkinter dashboard: {e}")
             self.enabled = False
@@ -545,33 +593,77 @@ class DashboardBridge:
             pass
 
     def stop(self):
-        """Terminates dashboard child process."""
-        if self.process and self.process.is_alive():
+        """Terminates dashboard child process and closes IPC listener."""
+        self.enabled = False
+        if self.conn:
+            try:
+                self.conn.close()
+            except Exception:
+                pass
+            self.conn = None
+        if self.listener:
+            try:
+                self.listener.close()
+            except Exception:
+                pass
+            self.listener = None
+        if self.process and self.process.poll() is None:
             self.process.terminate()
-            self.process.join(timeout=1.0)
+            try:
+                self.process.wait(timeout=1.0)
+            except Exception:
+                pass
             print("[DashboardBridge] C2 Dashboard terminated.")
 
 
 if __name__ == "__main__":
-    # Test standalone dashboard
     t_q = mp.Queue()
     c_q = mp.Queue()
-    p = mp.Process(target=run_dashboard_process, args=(t_q, c_q))
-    p.start()
 
-    print("Running standalone dashboard test for 5 seconds...")
-    for step in range(50):
-        time.sleep(0.1)
-        sim_t = step * 0.1
-        t_q.put({
-            "sim_time": sim_t,
-            "base_hp": max(0, 100 - step * 0.5),
-            "ammo_total": max(0, 80 - step),
-            "active_threats": 4 if step % 10 != 0 else 6,
-            "leader_alive": True,
-            "kills": step // 5,
-            "events": [f"Datalink tick {step}"] if step % 20 == 0 else []
-        })
+    if "--port" in sys.argv:
+        port_idx = sys.argv.index("--port") + 1
+        port = int(sys.argv[port_idx])
+        print(f"[Dashboard] Connecting to simulation bridge on port {port}...")
+        conn = Client(('127.0.0.1', port), authkey=b'mumt_c2')
 
-    p.terminate()
-    print("Standalone test completed successfully.")
+        def _socket_bridge():
+            while True:
+                try:
+                    if conn.poll(0.02):
+                        pkt = conn.recv()
+                        t_q.put(pkt)
+                    while True:
+                        cmd = c_q.get_nowait()
+                        conn.send(cmd)
+                except Empty:
+                    pass
+                except Exception:
+                    break
+                time.sleep(0.01)
+
+        bridge_th = threading.Thread(target=_socket_bridge, daemon=True)
+        bridge_th.start()
+        run_dashboard_process(t_q, c_q)
+    else:
+        # Background feeder generating synthetic telemetry for standalone UI preview
+        def _synthetic_feeder():
+            step = 0
+            while True:
+                time.sleep(0.1)
+                sim_t = step * 0.1
+                t_q.put({
+                    "sim_time": sim_t,
+                    "base_hp": max(15, 100 - (step * 0.2) % 100),
+                    "ammo_total": max(5, 80 - (step % 75)),
+                    "active_threats": 3 + (step // 20) % 5,
+                    "leader_alive": True,
+                    "kills": step // 10,
+                    "events": [f"Synthetic radar ping #{step}"] if step % 30 == 0 else []
+                })
+                step += 1
+
+        feeder = threading.Thread(target=_synthetic_feeder, daemon=True)
+        feeder.start()
+
+        print("[Standalone Dashboard] Opening interactive C2 Dashboard preview (Close window to exit)...")
+        run_dashboard_process(t_q, c_q)
