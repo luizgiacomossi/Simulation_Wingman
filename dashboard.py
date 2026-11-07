@@ -183,9 +183,13 @@ class TacticalDashboardApp:
                                        command=self._toggle_overkill)
         self.btn_overkill.pack(fill=tk.X, pady=2)
 
-        self.btn_ai = ttk.Button(parent, text="AI COMMANDER: [LAYA ON]", style="Tactical.TButton",
+        self.btn_ai = ttk.Button(parent, text="AI COMMANDER: [ENABLED]", style="Tactical.TButton",
                                  command=self._toggle_ai)
         self.btn_ai.pack(fill=tk.X, pady=2)
+
+        self.btn_engine = ttk.Button(parent, text="ENGINE: [LAYA (24ms)]", style="Tactical.TButton",
+                                     command=self._switch_engine)
+        self.btn_engine.pack(fill=tk.X, pady=2)
 
         # Quick Actions
         tk.Label(parent, text="MANUAL SORTIE", font=("Helvetica", 9, "bold"),
@@ -278,9 +282,13 @@ class TacticalDashboardApp:
 
     def _toggle_ai(self):
         self.ai_enabled = not self.ai_enabled
-        st = "LAYA ON" if self.ai_enabled else "MANUAL"
+        st = "ENABLED" if self.ai_enabled else "OFF"
         self.btn_ai.config(text=f"AI COMMANDER: [{st}]")
         self._send_command("TOGGLE_AI", {"enabled": self.ai_enabled})
+
+    def _switch_engine(self):
+        """Dispatches command to toggle between Laya (24ms) and SLM (Qwen via LM Studio)."""
+        self._send_command("SWITCH_ENGINE", {})
 
     def _on_submit_cmd(self):
         cmd = self.cmd_entry.get().strip()
@@ -357,12 +365,17 @@ class TacticalDashboardApp:
         except Exception:
             pass
 
-        # Update status bar
+        # Update status bar and engine buttons
         leader_alive = packet.get("leader_alive", True)
         l_str = "ALIVE" if leader_alive else "KIA"
         self.status_lbl.config(
             text=f"TIME: {sim_time:05.1f}s | BASE: {base_hp:03.0f}% | LEADER: {l_str} | THREATS: {active_threats:02d} | KIA: {kills:02d}"
         )
+
+        ai_en = packet.get("ai_enabled", self.ai_enabled)
+        ai_eng = packet.get("ai_engine", "laya")
+        self.btn_ai.config(text=f"AI COMMANDER: [{'ENABLED' if ai_en else 'OFF'}]")
+        self.btn_engine.config(text=f"ENGINE: [{'LAYA (24ms)' if ai_eng == 'laya' else 'SLM / QWEN (4s)'}]")
 
         # Process log events
         events = packet.get("events", [])
@@ -530,6 +543,11 @@ class DashboardBridge:
                 simulation.llm_commander.enabled = en
             self.emit_event(f"[C2 COMMAND] AI Commander set to {en}")
 
+        elif action == "SWITCH_ENGINE":
+            if hasattr(simulation, 'llm_commander') and simulation.llm_commander:
+                new_eng = simulation.llm_commander.switch_engine()
+                self.emit_event(f"[C2 COMMAND] AI Commander engine switched to {new_eng.upper()}")
+
         elif action == "SPAWN_THREAT":
             sm.add_kamikaze()
             self.emit_event(f"[C2 COMMAND] Hostile kamikaze spawned on perimeter.")
@@ -577,6 +595,9 @@ class DashboardBridge:
         events = list(self.pending_events)
         self.pending_events.clear()
 
+        ai_enabled = getattr(getattr(simulation, 'llm_commander', None), 'enabled', False)
+        ai_engine = getattr(getattr(simulation, 'llm_commander', None), 'engine', 'laya')
+
         packet = {
             "sim_time": current_time,
             "base_hp": base_hp,
@@ -584,7 +605,9 @@ class DashboardBridge:
             "active_threats": active_threats,
             "leader_alive": leader_alive,
             "kills": kills,
-            "events": events
+            "events": events,
+            "ai_enabled": ai_enabled,
+            "ai_engine": ai_engine
         }
 
         try:

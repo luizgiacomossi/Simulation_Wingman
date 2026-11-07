@@ -90,12 +90,12 @@ def main():
         from dashboard import DashboardBridge
         simulation.dashboard_bridge = DashboardBridge(enabled=True)
 
-    if "--llm" in sys.argv or "--ai" in sys.argv or "--laya" in sys.argv:
+    if "--llm" in sys.argv or "--ai" in sys.argv or "--laya" in sys.argv or "--slm" in sys.argv:
         if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
             simulation.llm_commander.enabled = True
             if "--laya" in sys.argv:
                 simulation.llm_commander.switch_engine("laya")
-            elif "--llm" in sys.argv:
+            elif "--llm" in sys.argv or "--slm" in sys.argv or "--ai" in sys.argv:
                 simulation.llm_commander.switch_engine("qwen")
     # para testar o pso, depois retirar esse comentario !!!!!!
     if running_PSO:

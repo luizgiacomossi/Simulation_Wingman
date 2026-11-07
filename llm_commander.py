@@ -58,8 +58,8 @@ class LLMTacticalCommander:
     2. 'qwen': Autoregressive System 2 generative SLM (Qwen 3.5 9B) via LM Studio (~5s).
     Executes in a separate daemon thread to guarantee zero frame drops in 60 FPS Pygame physics.
     """
-    persistent_enabled: bool = ("--llm" in sys.argv or "--ai" in sys.argv or "--laya" in sys.argv)
-    persistent_engine: str = "qwen" if "--llm" in sys.argv else "laya"
+    persistent_enabled: bool = ("--llm" in sys.argv or "--ai" in sys.argv or "--laya" in sys.argv or "--slm" in sys.argv)
+    persistent_engine: str = "qwen" if ("--llm" in sys.argv or "--slm" in sys.argv) else "laya"
 
     def __init__(self,
                  engine: Optional[str] = None,
