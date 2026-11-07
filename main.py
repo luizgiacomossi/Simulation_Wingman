@@ -86,6 +86,10 @@ def main():
     #list_obst = obst.get_coordenates()
 
     simulation = Simulation(screenSimulation)
+    if "--dashboard" in sys.argv:
+        from dashboard import DashboardBridge
+        simulation.dashboard_bridge = DashboardBridge(enabled=True)
+
     if "--llm" in sys.argv or "--ai" in sys.argv or "--laya" in sys.argv:
         if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
             simulation.llm_commander.enabled = True
@@ -205,7 +209,9 @@ def main():
             accelerated_factor = simulation.accelerated_factor
             previous_llm_state = getattr(getattr(simulation, 'llm_commander', None), 'enabled', False)
             previous_llm_engine = getattr(getattr(simulation, 'llm_commander', None), 'engine', 'laya')
+            previous_dashboard = getattr(simulation, 'dashboard_bridge', None)
             simulation = Simulation(screenSimulation)
+            simulation.dashboard_bridge = previous_dashboard
             if hasattr(simulation, 'llm_commander') and simulation.llm_commander is not None:
                 simulation.llm_commander.enabled = previous_llm_state
                 simulation.llm_commander.engine = previous_llm_engine

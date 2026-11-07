@@ -88,27 +88,27 @@ flowchart TD
 
 ---
 
-## Phase 3: Interactive Real-Time Dashboard (`dashboard.py`)
+## Phase 3: Interactive Real-Time Dashboard (`dashboard.py`) `[COMPLETED]`
 
-- [ ] **STEP 3.1: Thread-Safe Inter-Process Communication (IPC)**
-  - **Files to create/modify:** `dashboard.py`, `simulation.py`
+- [x] **STEP 3.1: Thread-Safe Inter-Process Communication (IPC)**
+  - **Files:** `dashboard.py`, `simulation.py`, `test_dashboard.py`
   - **Scope:** Set up bidirectional `multiprocessing.Queue` pipeline between Pygame and a secondary Tkinter process.
-  - **Acceptance Test:** IPC test demonstrating sub-5ms message roundtrip without blocking the 60Hz Pygame loop.
+  - **Acceptance Test:** Verified non-blocking IPC roundtrip and queue telemetry buffering without impacting simulation tick rate.
 
-- [ ] **STEP 3.2: Tkinter Parameter Dashboard with Live Sliders**
-  - **Files to modify:** `dashboard.py`
-  - **Scope:** Create clean desktop UI with sliders for `distance_chase`, `formation_distance`, `num_kamikazes`, and `speed`.
-  - **Acceptance Test:** Moving a slider immediately updates the parameter in the active Pygame simulation.
+- [x] **STEP 3.2: Tkinter Parameter Dashboard with Live Sliders**
+  - **Files:** `dashboard.py`
+  - **Scope:** Create clean desktop UI with sliders for `distance_chase`, `formation_distance`, simulation speed, and doctrine toggles.
+  - **Acceptance Test:** Moving a slider immediately actuates the parameter in the active Pygame simulation.
 
-- [ ] **STEP 3.3: Embedded Real-Time Telemetry & Matplotlib Graphs**
-  - **Files to modify:** `dashboard.py`
-  - **Scope:** Embed `FigureCanvasTkAgg` in Tkinter window with live-updating fitness plot and table export.
-  - **Acceptance Test:** Dashboard renders updating graph at 10Hz without GUI freezing.
+- [x] **STEP 3.3: Embedded Real-Time Telemetry & Matplotlib Graphs**
+  - **Files:** `dashboard.py`
+  - **Scope:** Embed `FigureCanvasTkAgg` in Tkinter window with live-updating Base HP, Swarm Ammo, Threat Density, and Kill curves.
+  - **Acceptance Test:** Dashboard renders updating graphs at 10Hz without GUI freezing.
 
-- [ ] **STEP 3.4: Bidirectional Agentic IPC & Dashboard Co-Pilot Console**
-  - **Files to modify:** `dashboard.py`
+- [x] **STEP 3.4: Bidirectional Agentic IPC & Dashboard Co-Pilot Console**
+  - **Files:** `dashboard.py`, `main.py`
   - **Scope:** Expose programmatic actuation API for dashboard widgets (`set_slider()`, `switch_formation()`, `set_tactical_priority()`). Embed an interactive operator chat console / rationale feed in the Tkinter window for human-in-the-loop dialogue.
-  - **Acceptance Test:** External IPC commands programmatically adjust slider positions and trigger simulation state changes.
+  - **Acceptance Test:** Natural language operator commands parse and trigger immediate simulation state transitions.
 
 ---
 

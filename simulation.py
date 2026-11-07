@@ -29,7 +29,10 @@ class ProcessorUserInput:
     def read(self):
         # Pygame Events 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT: sys.exit()
+            if event.type == pygame.QUIT:
+                if hasattr(self.simulation, 'dashboard_bridge') and self.simulation.dashboard_bridge is not None:
+                    self.simulation.dashboard_bridge.stop()
+                sys.exit()
 
             # 1. Forward event to GUIManager first (Minimap jump, Agent Inspector, Pause)
             if hasattr(self.simulation, 'gui_manager') and self.simulation.gui_manager is not None:
@@ -135,6 +138,7 @@ class Simulation(object):
         self.gui_manager = GUIManager() if self.canvas is not None else None
         self.swarm_manager = SwarmManager(window=self.canvas)
         self.llm_commander = LLMTacticalCommander()
+        self.dashboard_bridge = None
 
     @property
     def swarm(self):
@@ -203,6 +207,9 @@ class Simulation(object):
                 self.swarm_manager.update(list_obst)
                 if hasattr(self, 'llm_commander') and self.llm_commander is not None:
                     self.llm_commander.update(self.swarm_manager.simulation_time, self)
+
+        if hasattr(self, 'dashboard_bridge') and self.dashboard_bridge is not None:
+            self.dashboard_bridge.update(self, self.swarm_manager.simulation_time)
 
         if self.canvas is not None:
             self.swarm_manager.draw(self.canvas, self.screenSimulation)
