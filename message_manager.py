@@ -16,6 +16,7 @@ class MessageTopic(str, Enum):
     TARGET_ASSIGNMENT = "TARGET_ASSIGNMENT"    # Tactical coordinator: Hungarian threat lock & role
     THREAT_ALERT = "THREAT_ALERT"              # Scout/Wingman alert: hostile contact detected
     STATUS_REPORT = "STATUS_REPORT"            # Wingman report: ammo count, fuel, damage state
+    WEAPON_RELEASE = "WEAPON_RELEASE"          # Fire notification: shooter, target_id, weapon, eta
     CASUALTY_ALERT = "CASUALTY_ALERT"          # Wingman/Leader destroyed alert
     HEARTBEAT = "HEARTBEAT"                    # Periodic presence / datalink sync ping
 

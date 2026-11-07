@@ -1064,7 +1064,8 @@ class LeadingDrone(Vehicle):
         self.destroyed = True
 
 class LoyalWingman(Vehicle):
-    def __init__(self, x, y, behavior, window, protected_area, distance_chase = 400, kp= 0.625, kv= 4.5, enable_rtb: bool = ENABLE_WINGMAN_RTB):
+    def __init__(self, x, y, behavior, window, protected_area, distance_chase = 400, kp= 0.625, kv= 4.5,
+                 enable_rtb: bool = ENABLE_WINGMAN_RTB, enable_anti_overkill: bool = ENABLE_ANTI_OVERKILL):
         super().__init__(x, y, behavior, window)
         self.destroyed = False
         self.error = vec2(0,0)
@@ -1087,6 +1088,10 @@ class LoyalWingman(Vehicle):
         self.rtb_status = ""
         self.is_sacrificing = False
         self.sacrificial_target = None
+        # Anti-Overkill coordination via datalink
+        self.enable_anti_overkill = enable_anti_overkill
+        self.engaged_threats: dict = {}  # target_id -> expiration timestamp
+        self.sim_time = 0.0
 
     def destroy(self):
         self.destroyed = True
@@ -1095,6 +1100,7 @@ class LoyalWingman(Vehicle):
         """
         Polls and processes incoming datalink messages from leader or peers.
         """
+        self.sim_time = current_time
         messages = self.poll_messages()
         for msg in messages:
             if msg.topic == "FORMATION_COMMAND":
@@ -1112,6 +1118,46 @@ class LoyalWingman(Vehicle):
                     self.kamikaze_to_attack = threat
                 if role is not None:
                     self.tactical_role = role
+            elif msg.topic in (MessageTopic.WEAPON_RELEASE, "WEAPON_RELEASE"):
+                # Peer datalink announcement: weapon released against hostile threat
+                target_id = msg.payload.get("target_id")
+                eta = msg.payload.get("eta", OVERKILL_LOCK_DURATION)
+                expires_at = current_time + eta + 0.15
+                if target_id is not None:
+                    self.engaged_threats[target_id] = expires_at
+
+    def is_threat_engaged(self, threat, current_time: float = None) -> bool:
+        """
+        Queries local datalink track table to check if a peer has released weapons on this threat.
+        Prunes expired engagements according to Shoot-Look-Shoot timeout.
+        """
+        if not self.enable_anti_overkill or threat is None:
+            return False
+        t_curr = self.sim_time if current_time is None else current_time
+        # Prune expired
+        self.engaged_threats = {tid: exp for tid, exp in self.engaged_threats.items() if exp > t_curr}
+        tid = getattr(threat, 'agent_id', id(threat))
+        return tid in self.engaged_threats
+
+    def find_unengaged_candidate_threat(self, max_range: float = 120.0, current_time: float = None):
+        """
+        Finds the closest unengaged kamikaze threat within firing range,
+        preventing wasted fire on targets already tagged by peers over datalink.
+        """
+        if not self.kamikazes:
+            return None
+        candidate = None
+        min_dist = float('inf')
+        t_curr = self.sim_time if current_time is None else current_time
+        for k in self.kamikazes:
+            if getattr(k, 'destroyed', False) or getattr(k, 'explode', False):
+                continue
+            dist = (k.location - self.location).length()
+            if dist <= max_range and not self.is_threat_engaged(k, t_curr):
+                if dist < min_dist:
+                    min_dist = dist
+                    candidate = k
+        return candidate
 
     def receive_list_kamikazes(self, kamikazes, quadtree_kamikazes=None):
         self.kamikazes = kamikazes
@@ -1188,6 +1234,26 @@ class LoyalWingman(Vehicle):
             self.attack_status = (kamikaze_position, True)
             if getattr(self, 'projectiles_pool', None) is not None:
                 self.projectiles_pool.append(bolt)
+            # Broadcast WEAPON_RELEASE over datalink bus
+            if self.message_bus is not None and self.agent_id is not None:
+                target_obj = target if hasattr(target, 'location') else (
+                    self.kamikazes[target] if self.kamikazes and isinstance(target, int) and target < len(self.kamikazes) else None
+                )
+                if target_obj is not None:
+                    dist = (target_obj.location - self.location).length()
+                    eta = dist / 850.0
+                    tid = getattr(target_obj, 'agent_id', id(target_obj))
+                    self.engaged_threats[tid] = self.sim_time + eta + 0.15
+                    self.broadcast_message(
+                        topic=MessageTopic.WEAPON_RELEASE,
+                        payload={
+                            "shooter": self.agent_id,
+                            "target_id": tid,
+                            "weapon_type": "VAPORIZER",
+                            "eta": eta
+                        },
+                        current_time=self.sim_time
+                    )
         else:
             self.attack_status = (kamikaze_position, False)
 
@@ -1198,6 +1264,26 @@ class LoyalWingman(Vehicle):
             self.attack_status = (kamikaze_position, True)
             if getattr(self, 'projectiles_pool', None) is not None:
                 self.projectiles_pool.append(bolt)
+            # Broadcast WEAPON_RELEASE over datalink bus
+            if self.message_bus is not None and self.agent_id is not None:
+                target_obj = target if hasattr(target, 'location') else (
+                    self.kamikazes[target] if self.kamikazes and isinstance(target, int) and target < len(self.kamikazes) else None
+                )
+                if target_obj is not None:
+                    dist = (target_obj.location - self.location).length()
+                    eta = dist / 650.0
+                    tid = getattr(target_obj, 'agent_id', id(target_obj))
+                    self.engaged_threats[tid] = self.sim_time + eta + 0.15
+                    self.broadcast_message(
+                        topic=MessageTopic.WEAPON_RELEASE,
+                        payload={
+                            "shooter": self.agent_id,
+                            "target_id": tid,
+                            "weapon_type": "FREEZING",
+                            "eta": eta
+                        },
+                        current_time=self.sim_time
+                    )
         else:
             self.attack_status = (kamikaze_position, False)
 

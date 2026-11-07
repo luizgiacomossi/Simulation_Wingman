@@ -314,18 +314,41 @@ class AttackThreatNode(LeafNode):
         if self.time_cooldown_freezing > COOLDOWN_FREEZING:
             agent.freezing_gun.available = True
 
-        # Check conditions to discharge weapons
-        if agent.distance_closest_kamikaze < 100 and self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
-            self.time_cooldown_vaporizer = 0.0
-            agent.fire_vaporizer(agent.closest_kamikaze)
-            agent.vaporizer_gun.available = False
+        # Check conditions to discharge weapons with Anti-Overkill fire discipline
+        primary_threat = getattr(agent, 'kamikaze_to_attack', None)
+        if primary_threat is None and getattr(agent, 'kamikazes', None) and 0 <= getattr(agent, 'index_closest', 0) < len(agent.kamikazes):
+            primary_threat = agent.kamikazes[agent.index_closest]
 
+        is_already_engaged = False
+        if hasattr(agent, 'is_threat_engaged') and primary_threat is not None:
+            is_already_engaged = agent.is_threat_engaged(primary_threat)
+
+        # 1. Lethal Directed-Energy Vaporizer Discharge
+        if self.time_cooldown_vaporizer > COOLDOWN_VAPORIZER:
+            if not is_already_engaged:
+                if agent.distance_closest_kamikaze < 100:
+                    self.time_cooldown_vaporizer = 0.0
+                    agent.fire_vaporizer(agent.closest_kamikaze)
+                    agent.vaporizer_gun.available = False
+            else:
+                # Primary threat is already targeted by peer datalink!
+                # Opportunistic retargeting: check if alternative threat in range is free
+                if hasattr(agent, 'find_unengaged_candidate_threat'):
+                    alt_threat = agent.find_unengaged_candidate_threat(max_range=100.0)
+                    if alt_threat is not None:
+                        self.time_cooldown_vaporizer = 0.0
+                        agent.kamikaze_to_attack = alt_threat
+                        agent.fire_vaporizer(alt_threat.location)
+                        agent.vaporizer_gun.available = False
+
+        # 2. Cryogenic Freezing Pulse Discharge
         kamikaze = agent.kamikaze_to_attack 
         if (agent.distance_closest_kamikaze < 300 and self.time_cooldown_freezing > COOLDOWN_FREEZING
                 and kamikaze is not None and not getattr(kamikaze, 'freezing', False)):
-            self.time_cooldown_freezing = 0.0
-            agent.fire_freezing(agent.closest_kamikaze)
-            agent.freezing_gun.available = False
+            if not (hasattr(agent, 'is_threat_engaged') and agent.is_threat_engaged(kamikaze)):
+                self.time_cooldown_freezing = 0.0
+                agent.fire_freezing(agent.closest_kamikaze)
+                agent.freezing_gun.available = False
 
         return ExecutionStatus.SUCCESS 
 

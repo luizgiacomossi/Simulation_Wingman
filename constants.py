@@ -70,5 +70,9 @@ TIME_EXPLOSION = 0.3
 ENABLE_WINGMAN_RTB = True   # Default: wingmen return to base when out of ammo
 RTB_REARM_DURATION = 3.0    # Seconds required inside base perimeter to reload weapons
 
+# Tactical Fire Discipline & Coordination
+ENABLE_ANTI_OVERKILL = True     # Enables decentralized WEAPON_RELEASE datalink coordination
+OVERKILL_LOCK_DURATION = 0.4    # Shoot-Look-Shoot timeout window in seconds
+
 # Experiment & Telemetry Saving
 SAVE_RESULTS = True

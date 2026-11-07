@@ -127,6 +127,8 @@ class SwarmManager(object):
                 leader=self.leadingdrone,
                 protected_area=self.protected_area
             )
+            drone.index = d
+            drone.agent_id = f"KAMIKAZE_{d}"
             self.kamikazes.append(drone)
 
     def create_leading_drone(self, distance_formation):
@@ -174,6 +176,8 @@ class SwarmManager(object):
             leader=self.leadingdrone,
             protected_area=self.protected_area
         )
+        drone.index = len(self.kamikazes)
+        drone.agent_id = f"KAMIKAZE_{drone.index}_{int(self.simulation_time)}"
         self.kamikazes.append(drone)
 
     def set_target_leader(self, target):
